@@ -1,0 +1,40 @@
+{"category": "vague", "vague": true, "prompt": "fix the problem"}
+{"category": "vague", "vague": true, "prompt": "please fix this asap"}
+{"category": "vague", "vague": true, "prompt": "this keeps failing, fix it"}
+{"category": "vague", "vague": true, "prompt": "make the code cleaner"}
+{"category": "vague", "vague": true, "prompt": "add more tests"}
+{"category": "vague", "vague": true, "prompt": "add comments"}
+{"category": "vague", "vague": true, "prompt": "improve performance"}
+{"category": "vague", "vague": true, "prompt": "refactor the code"}
+{"category": "vague", "vague": true, "prompt": "fix the warnings"}
+{"category": "vague", "vague": true, "prompt": "update the dependencies"}
+{"category": "vague", "vague": true, "prompt": "make it more robust"}
+{"category": "vague", "vague": true, "prompt": "fix whatever is wrong"}
+{"category": "vague", "vague": true, "prompt": "handle errors properly"}
+{"category": "vague", "vague": true, "prompt": "can you make this faster?"}
+{"category": "vague", "vague": true, "prompt": "it throws an exception, fix it"}
+{"category": "specific", "vague": false, "prompt": "fix the KeyError in load_config when CONFIG_PATH is unset"}
+{"category": "specific", "vague": false, "prompt": "add a unit test for OrderService.cancel when the order is already shipped"}
+{"category": "specific", "vague": false, "prompt": "move the retry logic from api/client.ts into a reusable withRetry helper"}
+{"category": "specific", "vague": false, "prompt": "make the users table sortable by signup date on the admin page"}
+{"category": "specific", "vague": false, "prompt": "add a Makefile target that runs the integration tests against docker compose"}
+{"category": "specific", "vague": false, "prompt": "fix the memory leak in the image resize worker, it never closes file handles"}
+{"category": "specific", "vague": false, "prompt": "change the session cookie to SameSite=Lax in middleware/session.go"}
+{"category": "specific", "vague": false, "prompt": "the payment webhook times out after 10 seconds; acknowledge first and process async"}
+{"category": "specific", "vague": false, "prompt": "add OpenAPI docs for the /orders endpoints"}
+{"category": "specific", "vague": false, "prompt": "upgrade the Postgres image in docker-compose.yml from 14 to 16"}
+{"category": "specific", "vague": false, "prompt": "add rate limiting of 100 requests per minute per API key to the public API"}
+{"category": "specific", "vague": false, "prompt": "write a migration that backfills the slug column from the title"}
+{"category": "conversational", "vague": false, "prompt": "perfect"}
+{"category": "conversational", "vague": false, "prompt": "do it"}
+{"category": "conversational", "vague": false, "prompt": "what are the trade-offs?"}
+{"category": "conversational", "vague": false, "prompt": "where is this configured?"}
+{"category": "conversational", "vague": false, "prompt": "why did the test fail?"}
+{"category": "conversational", "vague": false, "prompt": "show me the plan first"}
+{"category": "conversational", "vague": false, "prompt": "revert it"}
+{"category": "conversational", "vague": false, "prompt": "yes please, and push"}
+{"category": "hard", "vague": true, "prompt": "make the tests pass"}
+{"category": "hard", "vague": true, "prompt": "fix CI"}
+{"category": "hard", "vague": false, "prompt": "apply the same fix to the other two services"}
+{"category": "hard", "vague": false, "prompt": "fix the typo in the header"}
+{"category": "hard", "vague": false, "prompt": "make the error message clearer when the upload is too large"}

@@ -27,6 +27,7 @@ const LARGE_PASTE_TOKENS: usize = 5_000;
 const VAGUE_MAX_WORDS: usize = 30;
 const DONE_CRITERIA_MIN_WORDS: usize = 6;
 
+/// Verbs that make a prompt a request to change something.
 const TASK_VERBS: &[&str] = &[
     "fix",
     "add",
@@ -51,19 +52,181 @@ const TASK_VERBS: &[&str] = &[
     "handle",
     "resolve",
     "clean",
+    "speed",
 ];
 
-const VAGUE_REFERENCES: &[&str] = &[
+/// Symptom statements that imply "fix it" without a verb ("the build is red").
+const SYMPTOMS: &[&str] = &[
+    "broken",
+    "failing",
+    "fails",
+    "crashes",
+    "crashing",
+    "red",
+    "throws",
+    "not working",
+    "doesn't work",
+    "isn't working",
+    "stopped working",
+];
+
+/// Words that don't identify *what* to change: pronouns, filler, and nouns
+/// so generic they apply to any codebase ("the code", "the tests", "logging").
+const GENERIC_WORDS: &[&str] = &[
+    // pronouns and determiners
     "it",
+    "it's",
+    "its",
     "this",
     "that",
-    "the bug",
-    "the issue",
-    "the problem",
-    "the error",
+    "these",
+    "those",
+    "them",
+    "they",
     "something",
+    "everything",
+    "anything",
+    "whatever",
+    "all",
+    "some",
+    "any",
+    "more",
+    "the",
+    "a",
+    "an",
+    "i",
+    "we",
+    "you",
+    "me",
+    "my",
+    "our",
+    "your",
+    "there",
+    "here",
+    "one",
+    // function words
+    "to",
+    "of",
+    "in",
+    "on",
+    "for",
+    "with",
+    "from",
+    "up",
+    "out",
+    "about",
+    "and",
+    "or",
+    "but",
+    "so",
+    "is",
+    "are",
+    "was",
+    "be",
+    "been",
+    "not",
+    "can",
+    "could",
+    "would",
+    "will",
+    "please",
+    "just",
+    "now",
+    "too",
+    "very",
+    "really",
+    "still",
+    "anymore",
+    "asap",
+    "again",
+    "do",
+    "does",
+    "doesn't",
+    "did",
+    "get",
+    "getting",
+    "got",
+    "take",
+    "look",
+    "keeps",
+    "keep",
+    "what",
+    "why",
+    "how",
+    "we've",
+    "discussed",
+    "talked",
+    "mentioned",
+    // generic engineering nouns
+    "code",
+    "codebase",
+    "bug",
+    "issue",
+    "error",
+    "exception",
+    "warning",
+    "problem",
+    "crash",
+    "test",
+    "doc",
+    "docs",
+    "documentation",
+    "comment",
+    "app",
+    "application",
+    "project",
+    "repo",
+    "feature",
+    "ticket",
+    "logging",
+    "log",
+    "handling",
+    "build",
+    "ci",
+    "pipeline",
+    "linter",
+    "lint",
+    "performance",
+    "dependency",
+    "dependencies",
+    "version",
     "stuff",
-    "things",
+    "thing",
+    "case",
+    "edge",
+    // generic qualities
+    "better",
+    "faster",
+    "cleaner",
+    "robust",
+    "properly",
+    "correctly",
+    "slow",
+    "fast",
+    "new",
+    "wrong",
+    "working",
+    "work",
+    "broken",
+    "failing",
+    "red",
+];
+
+/// References to earlier conversation: the target is already established.
+const CONTINUATIONS: &[&str] = &[
+    "same",
+    "previous",
+    "again",
+    "above",
+    "before",
+    "other",
+    "rest",
+    "remaining",
+];
+
+/// First words of a question (as opposed to a request).
+const QUESTION_WORDS: &[&str] = &[
+    "why", "what", "how", "which", "where", "when", "who", "is", "are", "does", "did",
 ];
 
 const DONE_MARKERS: &[&str] = &[
@@ -103,15 +266,18 @@ pub fn lint(prompt: &str) -> Vec<Finding> {
     }
 
     let words = words(trimmed);
-    if !words.iter().any(|w| TASK_VERBS.contains(&w.as_str())) {
-        return findings;
-    }
     let phrase = format!(" {} ", words.join(" "));
     let contains = |p: &&str| phrase.contains(&format!(" {p} "));
+    let is_task =
+        words.iter().any(|w| TASK_VERBS.contains(&w.as_str())) || SYMPTOMS.iter().any(contains);
+    if !is_task || is_question(trimmed, &words) {
+        return findings;
+    }
 
     if words.len() <= VAGUE_MAX_WORDS
-        && VAGUE_REFERENCES.iter().any(contains)
         && !has_anchor(trimmed)
+        && !CONTINUATIONS.iter().any(contains)
+        && words.iter().all(|w| is_generic(w))
     {
         findings.push(Finding {
             code: "vague-target",
@@ -132,6 +298,25 @@ pub fn lint(prompt: &str) -> Vec<Finding> {
         });
     }
     findings
+}
+
+/// A single question ("why did you change that?") rather than a request.
+fn is_question(text: &str, words: &[String]) -> bool {
+    text.ends_with('?')
+        && text.matches('?').count() == 1
+        && words
+            .first()
+            .is_some_and(|w| QUESTION_WORDS.contains(&w.as_str()))
+}
+
+/// Is this word generic (or a task verb), allowing simple inflections?
+fn is_generic(word: &str) -> bool {
+    let known = |w: &str| GENERIC_WORDS.contains(&w) || TASK_VERBS.contains(&w);
+    known(word)
+        || ["s", "es", "ed", "d", "ing", "ly"]
+            .iter()
+            .filter_map(|suffix| word.strip_suffix(suffix))
+            .any(known)
 }
 
 fn words(text: &str) -> Vec<String> {
@@ -235,6 +420,46 @@ mod tests {
         ] {
             assert!(!codes(p).contains(&"vague-target"), "{p}");
         }
+    }
+
+    #[test]
+    fn generic_requests_without_pronouns_are_vague() {
+        for p in [
+            "add logging",
+            "fix the crash",
+            "improve the code",
+            "update the docs",
+        ] {
+            assert!(codes(p).contains(&"vague-target"), "{p}");
+        }
+    }
+
+    #[test]
+    fn symptom_statements_are_tasks() {
+        assert!(codes("it's not working").contains(&"vague-target"));
+        assert!(codes("the build is red").contains(&"vague-target"));
+    }
+
+    #[test]
+    fn domain_words_make_a_target_specific() {
+        for p in [
+            "fix the bug where the cart total goes negative with a 100% coupon",
+            "make the dashboard load faster, it fetches every order on page load",
+        ] {
+            assert!(!codes(p).contains(&"vague-target"), "{p}");
+        }
+    }
+
+    #[test]
+    fn questions_and_continuations_are_not_flagged() {
+        for p in [
+            "why did you change that?",
+            "fix it the same way you fixed the previous one",
+        ] {
+            assert!(!codes(p).contains(&"vague-target"), "{p}");
+        }
+        // A request phrased with "can you" is still a request.
+        assert!(codes("can you fix this?").contains(&"vague-target"));
     }
 
     #[test]

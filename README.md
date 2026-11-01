@@ -101,7 +101,35 @@ Rules only fire on prompts that look like task requests, so replies like "yes" o
 - Tool-output tokens are **estimates** (bytes ÷ 4) meant for ranking. They are not separate from input tokens: a tool result is written to the cache once and then re-read on every later turn, which is why trimming noisy output pays off for the rest of the session.
 - The transcript format is undocumented and may change; unparseable lines are skipped and counted.
 
+## Benchmarks
+
+Reproducible by anyone. See [bench/README.md](bench/README.md) for the methodology.
+
+```sh
+cargo bench --bench offline                               # free, deterministic
+cargo run --release --example e2e -- --yes                # real Claude Code runs (~$0.15 on Haiku)
+```
+
+Latest results: [offline](bench/results/offline.md) · [end-to-end](bench/results/e2e-haiku.md)
+
+**End-to-end** (Claude Code + Haiku, 5 runs per variant, success checked by the fixture's unit tests): following pacenote's advice cut tokens by **44–69%** and cost by **33–65%** per task, and every run in both variants fixed the bug (30/30).
+
+| task | vague prompt | pacenote flags | Δ tokens | Δ cost |
+|---|---|---|---:|---:|
+| failing test | "pagination is broken, can you fix it" | `no-done-criteria` (info) | −44% | −33% |
+| production error | "checkout is failing… ⟨35 KB log⟩ fix it" | `large-paste` | −69% | −65% |
+| red CI | "the tests are failing, fix them" | `vague-target` | −58% | −63% |
+
+| | Result |
+|---|---|
+| `stats` accuracy vs ground truth | exact (a naive per-line sum overcounts by ~150%) |
+| `vague-target` on held-out prompts | 100% precision, 88% recall |
+| hook overhead per prompt | ~1.5 ms p50 |
+| scan throughput | ~740 MB/s |
+
 ## Roadmap
+
+- [x] Reproducible benchmarks: offline accuracy/quality/latency + end-to-end token savings
 
 - [x] `pacenote hook install` / `uninstall`: edit settings.json safely
 - [ ] Per-session drill-down and "most expensive turns"

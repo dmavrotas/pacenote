@@ -1,0 +1,100 @@
+{"category": "vague", "vague": true, "prompt": "fix it"}
+{"category": "vague", "vague": true, "prompt": "fix the bug"}
+{"category": "vague", "vague": true, "prompt": "can you fix this?"}
+{"category": "vague", "vague": true, "prompt": "it's broken, fix it"}
+{"category": "vague", "vague": true, "prompt": "it doesn't work anymore, can you take a look and fix it"}
+{"category": "vague", "vague": true, "prompt": "make it work"}
+{"category": "vague", "vague": true, "prompt": "the app crashes, fix it"}
+{"category": "vague", "vague": true, "prompt": "fix the crash"}
+{"category": "vague", "vague": true, "prompt": "something is off with the API, fix it"}
+{"category": "vague", "vague": true, "prompt": "fix the error"}
+{"category": "vague", "vague": true, "prompt": "getting an error, please fix"}
+{"category": "vague", "vague": true, "prompt": "make it faster"}
+{"category": "vague", "vague": true, "prompt": "speed this up"}
+{"category": "vague", "vague": true, "prompt": "optimize this"}
+{"category": "vague", "vague": true, "prompt": "refactor this"}
+{"category": "vague", "vague": true, "prompt": "clean this up"}
+{"category": "vague", "vague": true, "prompt": "improve the code"}
+{"category": "vague", "vague": true, "prompt": "add error handling"}
+{"category": "vague", "vague": true, "prompt": "add logging"}
+{"category": "vague", "vague": true, "prompt": "add some tests"}
+{"category": "vague", "vague": true, "prompt": "handle the edge cases"}
+{"category": "vague", "vague": true, "prompt": "update it to the new version"}
+{"category": "vague", "vague": true, "prompt": "implement the feature we discussed"}
+{"category": "vague", "vague": true, "prompt": "fix the issue from the ticket"}
+{"category": "vague", "vague": true, "prompt": "make it better"}
+{"category": "vague", "vague": true, "prompt": "this is too slow, optimize it"}
+{"category": "vague", "vague": true, "prompt": "write tests for this"}
+{"category": "vague", "vague": true, "prompt": "debug this"}
+{"category": "vague", "vague": true, "prompt": "it's not working"}
+{"category": "vague", "vague": true, "prompt": "pagination is broken, can you fix it"}
+{"category": "specific", "vague": false, "prompt": "fix the failing test test_checkout_applies_coupon in tests/test_cart.py"}
+{"category": "specific", "vague": false, "prompt": "the /users endpoint returns 500 when the email is missing; return 400 with a validation error instead"}
+{"category": "specific", "vague": false, "prompt": "add structured logging with request_id to handlers/orders.go"}
+{"category": "specific", "vague": false, "prompt": "write unit tests for parse_duration() in utils/time.py covering empty and negative input"}
+{"category": "specific", "vague": false, "prompt": "refactor UserRepository to use the new db.Pool instead of a global connection"}
+{"category": "specific", "vague": false, "prompt": "bump axios to 1.7 in package.json and fix any type errors"}
+{"category": "specific", "vague": false, "prompt": "add an index on orders(customer_id, created_at) in a new migration"}
+{"category": "specific", "vague": false, "prompt": "getting `TypeError: Cannot read properties of undefined (reading 'map')` in ProductList.tsx when the API returns no items, fix it"}
+{"category": "specific", "vague": false, "prompt": "add retry with backoff to the S3 upload in storage/upload.py, max 3 attempts"}
+{"category": "specific", "vague": false, "prompt": "make the Dockerfile multi-stage so the final image doesn't include the Go toolchain"}
+{"category": "specific", "vague": false, "prompt": "fix the race condition in cache.Get where two goroutines can both miss and write"}
+{"category": "specific", "vague": false, "prompt": "add a GitHub Actions job that runs `npm run lint` on pull requests"}
+{"category": "specific", "vague": false, "prompt": "rename the amount column to amount_cents and update OrderModel"}
+{"category": "specific", "vague": false, "prompt": "add limit/offset pagination to GET /api/products"}
+{"category": "specific", "vague": false, "prompt": "the login form submits twice when you press Enter; prevent the double submit in LoginForm.tsx"}
+{"category": "specific", "vague": false, "prompt": "increase the Lambda timeout for process-invoices to 60s in serverless.yml"}
+{"category": "specific", "vague": false, "prompt": "add a Terraform output for the RDS endpoint in modules/db/outputs.tf"}
+{"category": "specific", "vague": false, "prompt": "switch config loading in settings.py to pydantic BaseSettings"}
+{"category": "specific", "vague": false, "prompt": "fix the N+1 query in OrderSerializer by prefetching line_items"}
+{"category": "specific", "vague": false, "prompt": "add a /healthz endpoint that returns 200 and the git sha"}
+{"category": "specific", "vague": false, "prompt": "write a docstring for calculate_tax explaining the rounding rules"}
+{"category": "specific", "vague": false, "prompt": "update README.md with instructions for running the app with docker compose"}
+{"category": "specific", "vague": false, "prompt": "the nightly job fails with KeyError: 'region' in jobs/sync.py; default the region to us-east-1"}
+{"category": "specific", "vague": false, "prompt": "make `cargo clippy -- -D warnings` pass"}
+{"category": "specific", "vague": false, "prompt": "debug why the websocket disconnects every 30s in client/socket.ts"}
+{"category": "specific", "vague": false, "prompt": "remove the deprecated v1 routes from api/routes.py and their tests"}
+{"category": "specific", "vague": false, "prompt": "add validation to CreateUserRequest: email required, name at most 100 chars"}
+{"category": "specific", "vague": false, "prompt": "implement the CSV export button on the reports page using the existing /api/reports/export endpoint"}
+{"category": "specific", "vague": false, "prompt": "fix the timezone bug: created_at is stored in local time instead of UTC in models/event.py"}
+{"category": "specific", "vague": false, "prompt": "set up pre-commit with black and ruff for this repo"}
+{"category": "conversational", "vague": false, "prompt": "yes"}
+{"category": "conversational", "vague": false, "prompt": "no"}
+{"category": "conversational", "vague": false, "prompt": "ok"}
+{"category": "conversational", "vague": false, "prompt": "go ahead"}
+{"category": "conversational", "vague": false, "prompt": "continue"}
+{"category": "conversational", "vague": false, "prompt": "looks good"}
+{"category": "conversational", "vague": false, "prompt": "thanks!"}
+{"category": "conversational", "vague": false, "prompt": "lgtm, commit it"}
+{"category": "conversational", "vague": false, "prompt": "sounds good, do it"}
+{"category": "conversational", "vague": false, "prompt": "wait, stop"}
+{"category": "conversational", "vague": false, "prompt": "undo that"}
+{"category": "conversational", "vague": false, "prompt": "try again"}
+{"category": "conversational", "vague": false, "prompt": "what does this function do?"}
+{"category": "conversational", "vague": false, "prompt": "why did you change that?"}
+{"category": "conversational", "vague": false, "prompt": "explain it more simply"}
+{"category": "conversational", "vague": false, "prompt": "can you show me the diff?"}
+{"category": "conversational", "vague": false, "prompt": "what's the difference between these two approaches?"}
+{"category": "conversational", "vague": false, "prompt": "how does the auth flow work here?"}
+{"category": "conversational", "vague": false, "prompt": "which one would you recommend?"}
+{"category": "conversational", "vague": false, "prompt": "is this safe to deploy?"}
+{"category": "conversational", "vague": false, "prompt": "what would break if we removed this?"}
+{"category": "conversational", "vague": false, "prompt": "summarize what you changed"}
+{"category": "conversational", "vague": false, "prompt": "push it"}
+{"category": "conversational", "vague": false, "prompt": "open a PR"}
+{"category": "conversational", "vague": false, "prompt": "run the tests"}
+{"category": "hard", "vague": true, "prompt": "fix the failing tests"}
+{"category": "hard", "vague": true, "prompt": "fix the linter errors"}
+{"category": "hard", "vague": true, "prompt": "the build is red"}
+{"category": "hard", "vague": true, "prompt": "update the docs"}
+{"category": "hard", "vague": true, "prompt": "fix all the bugs"}
+{"category": "hard", "vague": true, "prompt": "add dark mode"}
+{"category": "hard", "vague": true, "prompt": "make the app faster"}
+{"category": "hard", "vague": false, "prompt": "fix it the same way you fixed the previous one"}
+{"category": "hard", "vague": false, "prompt": "now do the same for the other endpoints"}
+{"category": "hard", "vague": false, "prompt": "fix the bug where the cart total goes negative with a 100% coupon"}
+{"category": "hard", "vague": false, "prompt": "make the dashboard load faster, it fetches every order on page load"}
+{"category": "hard", "vague": false, "prompt": "add tests for the pagination helpers"}
+{"category": "hard", "vague": false, "prompt": "review my changes"}
+{"category": "hard", "vague": false, "prompt": "why is this slow?"}
+{"category": "hard", "vague": false, "prompt": "add a dark mode toggle to the settings page"}
