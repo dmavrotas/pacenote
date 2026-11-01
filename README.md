@@ -59,7 +59,19 @@ TOOL OUTPUT ENTERING CONTEXT (top 6, est. tokens)
 
 ### Enable the prompt hook
 
-Add to `~/.claude/settings.json` (or a project's `.claude/settings.json`):
+```sh
+pacenote hook install                  # ~/.claude/settings.json (all projects)
+pacenote hook install --scope project  # .claude/settings.json (shared with your team)
+pacenote hook install --scope local    # .claude/settings.local.json (just you)
+pacenote hook install --strict         # also report informational findings
+pacenote hook install --dry-run        # print the result, write nothing
+pacenote hook uninstall
+```
+
+The installer is idempotent and only touches pacenote's own entry. It keeps your other hooks and settings (key order included), refuses to edit a file that isn't valid JSON, writes atomically, and saves the previous file as `settings.json.pacenote.bak`.
+
+<details>
+<summary>Manual setup</summary>
 
 ```json
 {
@@ -70,8 +82,7 @@ Add to `~/.claude/settings.json` (or a project's `.claude/settings.json`):
   }
 }
 ```
-
-Use `pacenote hook prompt --strict` to also get informational findings (e.g. missing "done" criteria).
+</details>
 
 ## Lint rules
 
@@ -92,7 +103,7 @@ Rules only fire on prompts that look like task requests, so replies like "yes" o
 
 ## Roadmap
 
-- [ ] `pacenote hook install`: write the settings.json entry safely
+- [x] `pacenote hook install` / `uninstall`: edit settings.json safely
 - [ ] Per-session drill-down and "most expensive turns"
 - [ ] Context-bloat audit: oversized CLAUDE.md / memory files, MCP tool schema weight
 - [ ] `PostToolUse` analysis of repeated reads of the same file
