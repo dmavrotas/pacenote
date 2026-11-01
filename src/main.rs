@@ -1,10 +1,11 @@
 use std::io::{self, IsTerminal, Read};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 use pacenote::hook;
+use pacenote::install::{self, Change};
 use pacenote::lint::{Severity, lint};
 use pacenote::report;
 use pacenote::stats::{self, Filter};
@@ -62,6 +63,58 @@ enum HookEvent {
         #[arg(long)]
         strict: bool,
     },
+    /// Register the prompt hook in Claude Code's settings.json
+    Install {
+        #[command(flatten)]
+        target: SettingsTarget,
+        /// Have the hook include informational findings
+        #[arg(long)]
+        strict: bool,
+        /// Hook command to register (default: this binary's absolute path)
+        #[arg(long)]
+        command: Option<String>,
+    },
+    /// Remove the prompt hook from Claude Code's settings.json
+    Uninstall {
+        #[command(flatten)]
+        target: SettingsTarget,
+    },
+}
+
+#[derive(clap::Args)]
+struct SettingsTarget {
+    /// Which settings file to edit
+    #[arg(long, value_enum, default_value_t = Scope::User)]
+    scope: Scope,
+    /// Edit this settings file instead of the one chosen by --scope
+    #[arg(long, value_name = "PATH", conflicts_with = "scope")]
+    settings: Option<PathBuf>,
+    /// Print the resulting settings without writing them
+    #[arg(long)]
+    dry_run: bool,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Scope {
+    /// ~/.claude/settings.json (all projects)
+    User,
+    /// .claude/settings.json in the current directory (shared with the team)
+    Project,
+    /// .claude/settings.local.json in the current directory (just you)
+    Local,
+}
+
+impl SettingsTarget {
+    fn path(&self) -> Result<PathBuf> {
+        if let Some(path) = &self.settings {
+            return Ok(path.clone());
+        }
+        Ok(match self.scope {
+            Scope::User => install::claude_config_dir()?.join("settings.json"),
+            Scope::Project => PathBuf::from(".claude/settings.json"),
+            Scope::Local => PathBuf::from(".claude/settings.local.json"),
+        })
+    }
 }
 
 fn main() -> Result<()> {
@@ -114,16 +167,90 @@ fn main() -> Result<()> {
                 }
             }
         }
+        Command::Hook {
+            event:
+                HookEvent::Install {
+                    target,
+                    strict,
+                    command,
+                },
+        } => {
+            let command = match command {
+                Some(c) => c,
+                None => {
+                    let exe = std::env::current_exe().context("locating the pacenote binary")?;
+                    warn_if_build_dir(&exe);
+                    install::hook_command(&exe, strict)
+                }
+            };
+            let path = target.path()?;
+            let mut settings = install::load(&path)?;
+            let change = install::install(&mut settings, &command)?;
+            let verb = match change {
+                Change::Added => "Added",
+                Change::Updated => "Updated",
+                Change::Unchanged => {
+                    println!("pacenote hook already installed in {}", path.display());
+                    return Ok(());
+                }
+            };
+            commit(
+                &path,
+                &settings,
+                target.dry_run,
+                &format!("{verb} `{command}`"),
+            )?;
+        }
+        Command::Hook {
+            event: HookEvent::Uninstall { target },
+        } => {
+            let path = target.path()?;
+            let mut settings = install::load(&path)?;
+            match install::uninstall(&mut settings) {
+                0 => println!("No pacenote hook found in {}", path.display()),
+                n => commit(
+                    &path,
+                    &settings,
+                    target.dry_run,
+                    &format!("Removed {n} pacenote hook(s)"),
+                )?,
+            }
+        }
     }
     Ok(())
 }
 
 fn default_root() -> Result<PathBuf> {
-    if let Ok(dir) = std::env::var("CLAUDE_CONFIG_DIR") {
-        return Ok(PathBuf::from(dir).join("projects"));
+    Ok(install::claude_config_dir()?.join("projects"))
+}
+
+/// Write (or, for a dry run, print) the edited settings and report what happened.
+fn commit(path: &Path, settings: &serde_json::Value, dry_run: bool, what: &str) -> Result<()> {
+    if dry_run {
+        println!("{}", serde_json::to_string_pretty(settings)?);
+        eprintln!("(dry run) {what} in {}", path.display());
+        return Ok(());
     }
-    let home = std::env::var("HOME").context("HOME is not set; pass --root")?;
-    Ok(PathBuf::from(home).join(".claude").join("projects"))
+    let backup = install::save(path, settings)?;
+    println!("{what} in {}", path.display());
+    if let Some(backup) = backup {
+        println!("Previous settings saved to {}", backup.display());
+    }
+    Ok(())
+}
+
+fn warn_if_build_dir(exe: &Path) {
+    let components: Vec<_> = exe.components().map(|c| c.as_os_str().to_owned()).collect();
+    if components
+        .windows(2)
+        .any(|w| w[0] == "target" && (w[1] == "debug" || w[1] == "release"))
+    {
+        eprintln!(
+            "warning: registering a binary inside a cargo build directory ({}).\n\
+             It will break on `cargo clean`; run `cargo install --path .` for a stable path.",
+            exe.display()
+        );
+    }
 }
 
 fn read_stdin() -> Result<String> {

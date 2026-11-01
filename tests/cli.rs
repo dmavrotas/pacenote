@@ -138,3 +138,73 @@ fn lint_command() {
             .contains("vague-target")
     );
 }
+
+#[test]
+fn hook_install_and_uninstall_round_trip() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("settings.json");
+    let original = "{\n  \"model\": \"opus\",\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Bash\",\n        \"hooks\": [\n          {\n            \"type\": \"command\",\n            \"command\": \"rtk hook claude\"\n          }\n        ]\n      }\n    ]\n  }\n}\n";
+    fs::write(&path, original).unwrap();
+
+    let run = |args: &[&str]| {
+        let out = pacenote()
+            .args(args)
+            .arg("--settings")
+            .arg(&path)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8(out.stdout).unwrap()
+    };
+
+    assert!(run(&["hook", "install"]).starts_with("Added"));
+    let installed: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    let cmd = installed["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
+        .as_str()
+        .unwrap();
+    assert!(cmd.ends_with("hook prompt"), "{cmd}");
+    assert!(dir.path().join("settings.json.pacenote.bak").exists());
+
+    assert!(run(&["hook", "install"]).contains("already installed"));
+    assert!(run(&["hook", "uninstall"]).starts_with("Removed 1"));
+    assert_eq!(fs::read_to_string(&path).unwrap(), original);
+}
+
+#[test]
+fn hook_install_dry_run_does_not_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("settings.json");
+    let out = pacenote()
+        .args([
+            "hook",
+            "install",
+            "--dry-run",
+            "--command",
+            "pacenote hook prompt",
+            "--settings",
+        ])
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(String::from_utf8_lossy(&out.stdout).contains("UserPromptSubmit"));
+    assert!(!path.exists());
+}
+
+#[test]
+fn hook_install_refuses_invalid_json() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("settings.json");
+    fs::write(&path, "{ not json").unwrap();
+    let out = pacenote()
+        .args(["hook", "install", "--settings"])
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert_eq!(fs::read_to_string(&path).unwrap(), "{ not json");
+}
