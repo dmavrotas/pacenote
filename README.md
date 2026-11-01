@@ -16,8 +16,19 @@ Everything runs locally. pacenote makes no network calls.
 
 ## Install
 
+Prebuilt binaries for every platform Claude Code runs on are attached to each [release](https://github.com/dmavrotas/pacenote/releases):
+
+| OS | x86_64 | arm64 |
+|---|---|---|
+| macOS | `x86_64-apple-darwin` | `aarch64-apple-darwin` |
+| Linux (glibc) | `x86_64-unknown-linux-gnu` | `aarch64-unknown-linux-gnu` |
+| Linux (static, Alpine) | `x86_64-unknown-linux-musl` | `aarch64-unknown-linux-musl` |
+| Windows | `x86_64-pc-windows-msvc` | `aarch64-pc-windows-msvc` |
+
+Each archive ships with a `.sha256` checksum. Or build from source:
+
 ```sh
-cargo install --path .
+cargo install --git https://github.com/dmavrotas/pacenote
 ```
 
 ## Usage
