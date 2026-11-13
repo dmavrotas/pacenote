@@ -16,5 +16,5 @@ def paginate(items, page, size):
         raise ValueError("page must be >= 1")
     if size <= 0:
         raise ValueError("size must be positive")
-    start = (page - 1) * size + 1
+    start = (page - 1) * size
     return items[start:start + size]
