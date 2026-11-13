@@ -338,7 +338,10 @@ fn pct_err(value: u64, truth: u64) -> String {
 // 2. Lint quality
 // ---------------------------------------------------------------------------
 
-#[derive(Deserialize)]
+/// Languages with prompt corpora in `bench/` (`prompts[.<lang>].jsonl`).
+const LANGUAGES: &[&str] = &["en", "el", "fr", "es", "de"];
+
+#[derive(Clone, Deserialize)]
 struct Labelled {
     category: String,
     vague: bool,
@@ -376,13 +379,29 @@ fn lint_quality(report: &mut String) {
     );
     let _ = writeln!(
         report,
-        "| set | prompts | precision | recall | F1 | TP | FP | FN | TN |"
+        "| language · set | prompts | precision | recall | F1 | TP | FP | FN | TN |"
     );
     let _ = writeln!(report, "|---|---:|---:|---:|---:|---:|---:|---:|---:|");
-    let sets = [
-        ("dev", load_prompts("prompts.jsonl")),
-        ("held-out", load_prompts("prompts-holdout.jsonl")),
-    ];
+    let sets: Vec<(String, Vec<Labelled>)> = LANGUAGES
+        .iter()
+        .flat_map(|lang| {
+            let suffix = if *lang == "en" {
+                String::new()
+            } else {
+                format!(".{lang}")
+            };
+            [
+                (
+                    format!("{lang} · dev"),
+                    load_prompts(&format!("prompts{suffix}.jsonl")),
+                ),
+                (
+                    format!("{lang} · held-out"),
+                    load_prompts(&format!("prompts-holdout{suffix}.jsonl")),
+                ),
+            ]
+        })
+        .collect();
     let mut details = String::new();
     for (name, corpus) in &sets {
         let (mut tp, mut fp, mut fn_, mut tn) = (0, 0, 0, 0);
@@ -430,6 +449,13 @@ fn lint_quality(report: &mut String) {
     }
     let _ = writeln!(report);
 
+    let pooled = |kind: &str| -> Vec<Labelled> {
+        sets.iter()
+            .filter(|(name, _)| name.ends_with(kind))
+            .flat_map(|(_, corpus)| corpus.iter().cloned())
+            .collect()
+    };
+    let _ = writeln!(report, "All languages pooled:\n");
     let _ = writeln!(report, "| category | dev flagged | held-out flagged |");
     let _ = writeln!(report, "|---|---:|---:|");
     for category in ["vague", "specific", "conversational", "hard"] {
@@ -441,8 +467,8 @@ fn lint_quality(report: &mut String) {
         let _ = writeln!(
             report,
             "| {category} | {} | {} |",
-            cell(&sets[0].1),
-            cell(&sets[1].1)
+            cell(&pooled("dev")),
+            cell(&pooled("held-out"))
         );
     }
     let _ = writeln!(report, "\n{details}");
