@@ -1,0 +1,16 @@
+{"category": "vague", "vague": true, "prompt": "soluciona el problema"}
+{"category": "vague", "vague": true, "prompt": "ya no funciona, ¿lo puedes arreglar?"}
+{"category": "vague", "vague": true, "prompt": "mejora el rendimiento"}
+{"category": "vague", "vague": true, "prompt": "añade más tests"}
+{"category": "vague", "vague": true, "prompt": "corrige los warnings"}
+{"category": "vague", "vague": true, "prompt": "haz que funcione"}
+{"category": "specific", "vague": false, "prompt": "arregla el KeyError en load_config cuando CONFIG_PATH no está definido"}
+{"category": "specific", "vague": false, "prompt": "añade rate limiting de 100 peticiones por minuto a la API pública"}
+{"category": "specific", "vague": false, "prompt": "cambia la cookie de sesión a SameSite=Lax en middleware/session.go"}
+{"category": "specific", "vague": false, "prompt": "permite ordenar la tabla de usuarios por fecha de registro en la página de admin"}
+{"category": "conversational", "vague": false, "prompt": "sí, hazlo"}
+{"category": "conversational", "vague": false, "prompt": "¿cuáles son los trade-offs?"}
+{"category": "conversational", "vague": false, "prompt": "¿dónde se configura esto?"}
+{"category": "conversational", "vague": false, "prompt": "¿por qué falló el test?"}
+{"category": "hard", "vague": true, "prompt": "arregla la CI"}
+{"category": "hard", "vague": false, "prompt": "aplica el mismo arreglo a los otros dos servicios"}

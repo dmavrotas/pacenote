@@ -1,0 +1,41 @@
+{"category": "vague", "vague": true, "prompt": "behebe es"}
+{"category": "vague", "vague": true, "prompt": "behebe den Bug"}
+{"category": "vague", "vague": true, "prompt": "kannst du das fixen?"}
+{"category": "vague", "vague": true, "prompt": "es funktioniert nicht, mach es heile"}
+{"category": "vague", "vague": true, "prompt": "mach es schneller"}
+{"category": "vague", "vague": true, "prompt": "verbessere den Code"}
+{"category": "vague", "vague": true, "prompt": "füge Fehlerbehandlung hinzu"}
+{"category": "vague", "vague": true, "prompt": "füge Logging hinzu"}
+{"category": "vague", "vague": true, "prompt": "schreib Tests dafür"}
+{"category": "vague", "vague": true, "prompt": "der Build ist rot"}
+{"category": "vague", "vague": true, "prompt": "löse das Problem"}
+{"category": "vague", "vague": true, "prompt": "räum den Code auf"}
+{"category": "vague", "vague": true, "prompt": "refaktoriere das"}
+{"category": "vague", "vague": true, "prompt": "die App stürzt ab, behebe das"}
+{"category": "vague", "vague": true, "prompt": "aktualisiere die Doku"}
+{"category": "specific", "vague": false, "prompt": "behebe den Off-by-one in paginate(), damit tests/test_pagination.py durchläuft"}
+{"category": "specific", "vague": false, "prompt": "füge in http/client.go Retries mit exponentiellem Backoff hinzu, maximal 3 Versuche"}
+{"category": "specific", "vague": false, "prompt": "der Endpoint /users liefert 500, wenn die E-Mail fehlt, er soll 400 liefern"}
+{"category": "specific", "vague": false, "prompt": "schreib Unit-Tests für parse_duration() in utils/time.py"}
+{"category": "specific", "vague": false, "prompt": "behebe die NullPointerException in OrderController.checkout()"}
+{"category": "specific", "vague": false, "prompt": "benenne get_user im ganzen Projekt in fetch_user um"}
+{"category": "specific", "vague": false, "prompt": "aktualisiere axios in package.json auf 1.7 und behebe die Typfehler"}
+{"category": "specific", "vague": false, "prompt": "füge einen Index auf orders(customer_id, created_at) in einer neuen Migration hinzu"}
+{"category": "specific", "vague": false, "prompt": "das Login-Formular wird bei Enter doppelt abgeschickt, behebe das in LoginForm.tsx"}
+{"category": "specific", "vague": false, "prompt": "mach das Dockerfile multi-stage, damit das finale Image keine Go-Toolchain enthält"}
+{"category": "specific", "vague": false, "prompt": "behebe den Fehler „connection refused“ beim Start des Workers"}
+{"category": "specific", "vague": false, "prompt": "füge limit/offset-Paginierung zu GET /api/products hinzu"}
+{"category": "conversational", "vague": false, "prompt": "ja"}
+{"category": "conversational", "vague": false, "prompt": "ok"}
+{"category": "conversational", "vague": false, "prompt": "leg los"}
+{"category": "conversational", "vague": false, "prompt": "weiter"}
+{"category": "conversational", "vague": false, "prompt": "super, danke!"}
+{"category": "conversational", "vague": false, "prompt": "was macht diese Funktion?"}
+{"category": "conversational", "vague": false, "prompt": "warum hast du das geändert?"}
+{"category": "conversational", "vague": false, "prompt": "zeig mir den Diff"}
+{"category": "conversational", "vague": false, "prompt": "committe es"}
+{"category": "conversational", "vague": false, "prompt": "warte, stopp"}
+{"category": "hard", "vague": true, "prompt": "behebe die fehlschlagenden Tests"}
+{"category": "hard", "vague": true, "prompt": "aktualisiere die Dokumentation"}
+{"category": "hard", "vague": false, "prompt": "behebe es genauso wie das vorherige"}
+{"category": "hard", "vague": false, "prompt": "behebe den Bug, bei dem die Warenkorbsumme mit einem 100%-Gutschein negativ wird"}

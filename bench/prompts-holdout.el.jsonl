@@ -1,0 +1,16 @@
+{"category": "vague", "vague": true, "prompt": "φτιάξε το πρόβλημα"}
+{"category": "vague", "vague": true, "prompt": "δεν λειτουργεί, μπορείς να το διορθώσεις;"}
+{"category": "vague", "vague": true, "prompt": "βελτίωσε την απόδοση"}
+{"category": "vague", "vague": true, "prompt": "πρόσθεσε περισσότερα τεστ"}
+{"category": "vague", "vague": true, "prompt": "διόρθωσε τα warnings"}
+{"category": "vague", "vague": true, "prompt": "κάν' το να δουλεύει"}
+{"category": "specific", "vague": false, "prompt": "διόρθωσε το KeyError στη load_config όταν λείπει το CONFIG_PATH"}
+{"category": "specific", "vague": false, "prompt": "πρόσθεσε rate limiting 100 αιτημάτων ανά λεπτό στο δημόσιο API"}
+{"category": "specific", "vague": false, "prompt": "άλλαξε το session cookie σε SameSite=Lax στο middleware/session.go"}
+{"category": "specific", "vague": false, "prompt": "κάνε τον πίνακα χρηστών να ταξινομείται κατά ημερομηνία εγγραφής στη σελίδα admin"}
+{"category": "conversational", "vague": false, "prompt": "ναι, κάν' το"}
+{"category": "conversational", "vague": false, "prompt": "ποια είναι τα trade-offs;"}
+{"category": "conversational", "vague": false, "prompt": "πού ρυθμίζεται αυτό;"}
+{"category": "conversational", "vague": false, "prompt": "γιατί απέτυχε το τεστ;"}
+{"category": "hard", "vague": true, "prompt": "διόρθωσε το CI"}
+{"category": "hard", "vague": false, "prompt": "κάνε την ίδια διόρθωση και στις άλλες δύο υπηρεσίες"}
