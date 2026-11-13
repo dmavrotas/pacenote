@@ -105,7 +105,7 @@ enum HookEvent {
 
 #[derive(clap::Args, Clone)]
 struct RewriteArgs {
-    /// Model for rewriting (default: $PACENOTE_MODEL or claude-opus-5-5)
+    /// Model for rewriting (default: $PACENOTE_MODEL or claude-haiku-5-5)
     #[arg(long)]
     model: Option<String>,
     /// Where rewrites run

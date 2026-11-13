@@ -37,6 +37,8 @@ Each task gives Claude Code (`claude -p`) the same job twice, each time in a fre
 
 The specific prompts say *where* and *what done looks like*. They never say *how* to fix the bug.
 
+**Rewrite variant.** `--rewrite` adds a third variant: the vague prompt is first run through `pacenote rewrite` (with `--rewrite-model`) inside the fresh copy, and the rewrite call's tokens and cost are counted against it. Each attempt is kept in `results/`: v1 (Opus rewriter, before the context fix), v2, and the current one.
+
 **Scoring.** After each run, the fixture's unit tests decide success. A cheap run that didn't fix the bug counts as a failure, not a saving. Token counts and cost come from `claude -p --output-format json`.
 
 **Isolation.** Runs load no user hooks, plugins or MCP servers (`--setting-sources project`, `--strict-mcp-config`), so your local setup (including pacenote's own hook) doesn't affect results. Your user-level `CLAUDE.md` is still loaded, identically for both variants; use an account without one for the cleanest numbers.

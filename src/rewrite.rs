@@ -19,7 +19,8 @@ use anyhow::{Context, Result, anyhow, bail};
 use serde_json::{Value, json};
 
 /// Default model; override with `--model` or `PACENOTE_MODEL`.
-pub const DEFAULT_MODEL: &str = "claude-opus-5-5";
+/// The cheapest current model: rewriting a prompt is a small task.
+pub const DEFAULT_MODEL: &str = "claude-haiku-5-5";
 /// Set on the `claude -p` child so pacenote's own hook ignores the rewrite
 /// request instead of recursing into another rewrite.
 pub const REWRITING_ENV: &str = "PACENOTE_REWRITING";
@@ -45,7 +46,11 @@ Makefile, package.json script or CI config. Otherwise describe the step generica
 - If the prompt contains a large paste such as a log, keep only the lines that matter (the first \
 error and its stack trace) verbatim and drop the rest.
 - Keep it short: usually one to four sentences, plus any kept excerpt.
-- Do not solve the task and do not add work the engineer did not ask for.
+- Never add work. Do not ask for new tests, reproductions, log reading, refactoring or extra \
+checks unless the prompt asks for them. The rewrite must not be more work than the original.
+- If one or two files are clearly the target, name them instead of saying to search. Never list \
+files for the agent to look through; if no file is clearly the target, name none.
+- Do not solve the task.
 - If the prompt is already specific, return it unchanged.
 
 Output only the rewritten prompt, with no preamble or explanation.";
@@ -373,19 +378,50 @@ pub fn repo_context(dir: &Path) -> String {
             context.push_str(&files);
         }
         None => {
-            context.push_str("\nTop-level entries:\n");
-            if let Ok(entries) = std::fs::read_dir(dir) {
-                let mut names: Vec<_> = entries
-                    .filter_map(Result::ok)
-                    .map(|e| e.file_name().to_string_lossy().into_owned())
-                    .filter(|n| !n.starts_with('.'))
-                    .collect();
-                names.sort();
-                context.push_str(&names.join("\n"));
-            }
+            context.push_str("\nFiles:\n");
+            let mut files = Vec::new();
+            list_files(dir, dir, &mut files);
+            files.sort();
+            context.push_str(&files.join("\n"));
         }
     }
     truncate_bytes(&context, MAX_CONTEXT_BYTES)
+}
+
+/// Directories never worth describing to the rewriter.
+const SKIP_DIRS: &[&str] = &[
+    "target",
+    "node_modules",
+    "__pycache__",
+    "dist",
+    "build",
+    "venv",
+];
+const MAX_LISTED_FILES: usize = 500;
+
+/// Relative paths of files under `dir` (outside git), skipping hidden and
+/// build directories.
+fn list_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.filter_map(Result::ok) {
+        if out.len() >= MAX_LISTED_FILES {
+            return;
+        }
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.starts_with('.') {
+            continue;
+        }
+        let path = entry.path();
+        if path.is_dir() {
+            if !SKIP_DIRS.contains(&name.as_str()) {
+                list_files(root, &path, out);
+            }
+        } else if let Ok(rel) = path.strip_prefix(root) {
+            out.push(rel.to_string_lossy().replace('\\', "/"));
+        }
+    }
 }
 
 fn cap_lines(text: &str, max: usize) -> String {
@@ -496,13 +532,15 @@ mod tests {
     #[test]
     fn repo_context_lists_files_and_is_capped() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("main.rs"), "").unwrap();
-        std::fs::create_dir(dir.path().join("src")).unwrap();
+        std::fs::create_dir_all(dir.path().join("shop/__pycache__")).unwrap();
+        std::fs::write(dir.path().join("shop/pagination.py"), "").unwrap();
+        std::fs::write(dir.path().join("shop/__pycache__/x.pyc"), "").unwrap();
         let context = repo_context(dir.path());
         assert!(
-            context.contains("main.rs") && context.contains("src"),
-            "{context}"
+            context.contains("shop/pagination.py"),
+            "nested files: {context}"
         );
+        assert!(!context.contains("x.pyc"), "build dirs skipped: {context}");
         assert!(truncate_bytes(&"line\n".repeat(10_000), 100).len() < 130);
     }
 }
