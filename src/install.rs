@@ -158,7 +158,7 @@ pub fn claude_config_dir() -> Result<PathBuf> {
 }
 
 /// The hook command for a pacenote binary at `exe`.
-pub fn hook_command(exe: &Path, strict: bool) -> String {
+pub fn hook_command(exe: &Path, args: &[String]) -> String {
     // Forward slashes work in every shell Claude Code uses, including Git Bash on Windows.
     let exe = exe.to_string_lossy().replace('\\', "/");
     let exe = if exe.contains(char::is_whitespace) {
@@ -166,8 +166,24 @@ pub fn hook_command(exe: &Path, strict: bool) -> String {
     } else {
         exe
     };
-    let strict = if strict { " --strict" } else { "" };
-    format!("{exe} hook prompt{strict}")
+    let args: String = args
+        .iter()
+        .map(|a| format!(" {}", shell_quote(a)))
+        .collect();
+    format!("{exe} hook prompt{args}")
+}
+
+/// Quote an argument for the shell if it needs it.
+fn shell_quote(arg: &str) -> String {
+    if !arg.is_empty()
+        && arg
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "-_./:=@".contains(c))
+    {
+        arg.to_string()
+    } else {
+        format!("'{}'", arg.replace('\'', r"'\''"))
+    }
 }
 
 #[cfg(test)]
@@ -262,17 +278,38 @@ mod tests {
     #[test]
     fn hook_command_quotes_and_normalizes_paths() {
         assert_eq!(
-            hook_command(Path::new("/usr/bin/pacenote"), false),
+            hook_command(Path::new("/usr/bin/pacenote"), &[]),
             "/usr/bin/pacenote hook prompt"
         );
         assert_eq!(
-            hook_command(Path::new(r"C:\Program Files\pacenote.exe"), true),
+            hook_command(
+                Path::new(r"C:\Program Files\pacenote.exe"),
+                &["--strict".into()]
+            ),
             "\"C:/Program Files/pacenote.exe\" hook prompt --strict"
         );
         assert!(is_pacenote_hook(&hook_command(
             Path::new("pacenote.exe"),
-            true
+            &["--strict".into()]
         )));
+    }
+
+    #[test]
+    fn hook_command_forwards_and_quotes_rewrite_args() {
+        let args: Vec<String> = [
+            "--rewrite",
+            "--model",
+            "claude-haiku-5-5",
+            "--backend",
+            "claude",
+        ]
+        .map(String::from)
+        .to_vec();
+        assert_eq!(
+            hook_command(Path::new("/bin/pacenote"), &args),
+            "/bin/pacenote hook prompt --rewrite --model claude-haiku-5-5 --backend claude"
+        );
+        assert_eq!(shell_quote("it's"), r"'it'\''s'");
     }
 
     #[test]

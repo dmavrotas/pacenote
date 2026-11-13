@@ -30,6 +30,7 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use pacenote::lint::lint;
+use pacenote::rewrite::{BackendChoice, Rewriter, repo_context};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -57,6 +58,13 @@ struct Args {
     /// Write raw per-run results as JSON
     #[arg(long, value_name = "PATH")]
     json: Option<PathBuf>,
+    /// Also run a third variant: the vague prompt after `pacenote rewrite`
+    /// (the rewrite's own tokens and cost are counted against it)
+    #[arg(long)]
+    rewrite: bool,
+    /// Model for the rewrite (default: pacenote's default)
+    #[arg(long)]
+    rewrite_model: Option<String>,
     /// Confirm you accept spending tokens
     #[arg(long)]
     yes: bool,
@@ -114,7 +122,7 @@ fn tasks(log: &str) -> Vec<Task> {
 #[derive(Serialize)]
 struct Run {
     task: &'static str,
-    variant: &'static str,
+    variant: String,
     run: usize,
     success: bool,
     timed_out: bool,
@@ -126,6 +134,12 @@ struct Run {
     output_tokens: u64,
     cost_usd: f64,
     duration_ms: u64,
+    /// The rewrite step's own usage (rewritten variant only), included in
+    /// `total_tokens()` and `cost_usd`.
+    rewrite_tokens: u64,
+    rewrite_cost_usd: f64,
+    /// The prompt actually sent (shows each rewrite).
+    prompt: String,
 }
 
 impl Run {
@@ -134,6 +148,7 @@ impl Run {
             + self.cache_creation_input_tokens
             + self.cache_read_input_tokens
             + self.output_tokens
+            + self.rewrite_tokens
     }
 }
 
@@ -145,7 +160,22 @@ fn main() -> Result<()> {
         .into_iter()
         .filter(|t| args.task.as_deref().is_none_or(|f| t.name.contains(f)))
         .collect();
-    let sessions = tasks.len() * 2 * args.runs;
+    let variants: Vec<&str> = if args.rewrite {
+        vec!["vague", "specific", "rewritten"]
+    } else {
+        vec!["vague", "specific"]
+    };
+    let rewriter = args
+        .rewrite
+        .then(|| {
+            Rewriter::new(
+                BackendChoice::Auto,
+                args.rewrite_model.clone(),
+                Duration::from_secs(60),
+            )
+        })
+        .transpose()?;
+    let sessions = tasks.len() * variants.len() * args.runs;
 
     if !args.yes {
         bail!(
@@ -167,14 +197,24 @@ fn main() -> Result<()> {
                 task.name
             );
         }
-        for (variant, prompt) in [("vague", &task.vague), ("specific", &task.specific)] {
+        for variant in variants.iter().copied() {
             for run in 1..=args.runs {
                 eprint!(
                     "[{}/{sessions}] {} · {variant} · run {run} … ",
                     runs.len() + 1,
                     task.name
                 );
-                let result = run_once(&args, &fixture, &log, task, variant, prompt, run)?;
+                let result = run_once(
+                    &args,
+                    &fixture,
+                    &log,
+                    task,
+                    variant,
+                    (variant == "rewritten")
+                        .then_some(rewriter.as_ref())
+                        .flatten(),
+                    run,
+                )?;
                 eprintln!(
                     "{} · {} tokens · {} turns · ${:.4}",
                     if result.success { "pass" } else { "FAIL" },
@@ -187,7 +227,7 @@ fn main() -> Result<()> {
         }
     }
 
-    print!("{}", summarize(&args, &tasks, &runs));
+    print!("{}", summarize(&args, &tasks, &variants, &runs));
     if let Some(path) = &args.json {
         fs::write(path, serde_json::to_string_pretty(&runs)?)?;
         eprintln!("raw results written to {}", path.display());
@@ -200,12 +240,30 @@ fn run_once(
     fixture: &Path,
     log: &str,
     task: &Task,
-    variant: &'static str,
-    prompt: &str,
+    variant: &str,
+    rewriter: Option<&Rewriter>,
     run: usize,
 ) -> Result<Run> {
     let dir = prepare(fixture, log)?;
     let start = Instant::now();
+    // The rewrite happens inside the fresh copy, exactly as the hook would see it.
+    let prompt = if variant == "specific" {
+        &task.specific
+    } else {
+        &task.vague
+    };
+    let (prompt, rewrite_tokens, rewrite_cost_usd) = match rewriter {
+        Some(rewriter) => {
+            let r = rewriter.rewrite(prompt, &repo_context(dir.path()))?;
+            (
+                r.text,
+                r.input_tokens + r.output_tokens,
+                r.cost_usd.unwrap_or(0.0),
+            )
+        }
+        None => (prompt.to_string(), 0, 0.0),
+    };
+    let prompt = prompt.as_str();
     let mut child = Command::new(&args.claude)
         .args([
             "-p",
@@ -248,7 +306,7 @@ fn run_once(
 
     Ok(Run {
         task: task.name,
-        variant,
+        variant: variant.to_string(),
         run,
         success: !timed_out && verify(&args.python, dir.path(), task.verify)?,
         timed_out,
@@ -258,8 +316,11 @@ fn run_once(
         cache_creation_input_tokens: n(&usage["cache_creation_input_tokens"]),
         cache_read_input_tokens: n(&usage["cache_read_input_tokens"]),
         output_tokens: n(&usage["output_tokens"]),
-        cost_usd: result["total_cost_usd"].as_f64().unwrap_or(0.0),
+        cost_usd: result["total_cost_usd"].as_f64().unwrap_or(0.0) + rewrite_cost_usd,
         duration_ms: start.elapsed().as_millis() as u64,
+        rewrite_tokens,
+        rewrite_cost_usd,
+        prompt: prompt.to_string(),
     })
 }
 
@@ -354,12 +415,22 @@ fn median(mut values: Vec<f64>) -> f64 {
     }
 }
 
-fn summarize(args: &Args, tasks: &[Task], runs: &[Run]) -> String {
+fn summarize(args: &Args, tasks: &[Task], variants: &[&str], runs: &[Run]) -> String {
     let mut out = String::new();
     let _ = writeln!(out, "\n# pacenote end-to-end benchmark\n");
+    let rewrite_note = if args.rewrite {
+        format!(
+            " · rewrites by `{}`",
+            args.rewrite_model
+                .as_deref()
+                .unwrap_or(pacenote::rewrite::DEFAULT_MODEL)
+        )
+    } else {
+        String::new()
+    };
     let _ = writeln!(
         out,
-        "Claude Code `{}` · model `{}` · {} runs per variant · medians shown\n",
+        "Claude Code `{}` · model `{}`{rewrite_note} · {} runs per variant · medians shown\n",
         claude_version(&args.claude),
         args.model,
         args.runs
@@ -370,16 +441,14 @@ fn summarize(args: &Args, tasks: &[Task], runs: &[Run]) -> String {
     );
     let _ = writeln!(out, "|---|---|---|---:|---:|---:|---:|---:|");
 
-    let mut totals = [(0.0, 0.0, 0usize); 2]; // (tokens, cost, successes) per variant
+    // (tokens, cost, successes, runs) per variant
+    let mut totals = vec![(0.0, 0.0, 0usize, 0usize); variants.len()];
     for task in tasks {
         let mut medians = Vec::new();
-        for (i, (variant, prompt)) in [("vague", &task.vague), ("specific", &task.specific)]
-            .into_iter()
-            .enumerate()
-        {
+        for (i, variant) in variants.iter().enumerate() {
             let rs: Vec<&Run> = runs
                 .iter()
-                .filter(|r| r.task == task.name && r.variant == variant)
+                .filter(|r| r.task == task.name && r.variant == *variant)
                 .collect();
             let tokens = median(rs.iter().map(|r| r.total_tokens() as f64).collect());
             let turns = median(rs.iter().map(|r| r.num_turns as f64).collect());
@@ -389,11 +458,22 @@ fn summarize(args: &Args, tasks: &[Task], runs: &[Run]) -> String {
             totals[i].0 += rs.iter().map(|r| r.total_tokens() as f64).sum::<f64>();
             totals[i].1 += rs.iter().map(|r| r.cost_usd).sum::<f64>();
             totals[i].2 += ok;
-            let findings: Vec<_> = lint(prompt).into_iter().map(|f| f.code).collect();
-            let lint_cell = if findings.is_empty() {
-                "clean".to_string()
-            } else {
-                findings.join(", ")
+            totals[i].3 += rs.len();
+            let lint_cell = match *variant {
+                "rewritten" => "(rewrite of vague)".to_string(),
+                v => {
+                    let prompt = if v == "specific" {
+                        &task.specific
+                    } else {
+                        &task.vague
+                    };
+                    let codes: Vec<_> = lint(prompt).into_iter().map(|f| f.code).collect();
+                    if codes.is_empty() {
+                        "clean".to_string()
+                    } else {
+                        codes.join(", ")
+                    }
+                }
             };
             let _ = writeln!(
                 out,
@@ -404,31 +484,38 @@ fn summarize(args: &Args, tasks: &[Task], runs: &[Run]) -> String {
             );
             medians.push((tokens, cost));
         }
-        let _ = writeln!(
-            out,
-            "| | **Δ specific vs vague** | | | **{}** | | **{}** | |",
-            delta(medians[0].0, medians[1].0),
-            delta(medians[0].1, medians[1].1)
-        );
+        for (i, variant) in variants.iter().enumerate().skip(1) {
+            let _ = writeln!(
+                out,
+                "| | **Δ {variant} vs vague** | | | **{}** | | **{}** | |",
+                delta(medians[0].0, medians[i].0),
+                delta(medians[0].1, medians[i].1)
+            );
+        }
     }
 
-    let n = runs.len() / 2;
+    let _ = writeln!(out, "\n**All runs:**\n");
+    for (variant, (tokens, cost, ok, n)) in variants.iter().zip(&totals) {
+        let vs_vague = if *variant == "vague" {
+            String::new()
+        } else {
+            format!(
+                " ({} tokens, {} cost vs vague)",
+                delta(totals[0].0, *tokens),
+                delta(totals[0].1, *cost)
+            )
+        };
+        let _ = writeln!(
+            out,
+            "- {variant}: {ok}/{n} succeeded, ${cost:.3} total, {:.0}k tokens{vs_vague}",
+            tokens / 1e3
+        );
+    }
     let _ = writeln!(
         out,
-        "\n**All runs:** vague {}/{n} succeeded, ${:.3} total, {:.0}k tokens · specific {}/{n} succeeded, ${:.3} total, {:.0}k tokens ({} tokens, {} cost).\n",
-        totals[0].2,
-        totals[0].1,
-        totals[0].0 / 1e3,
-        totals[1].2,
-        totals[1].1,
-        totals[1].0 / 1e3,
-        delta(totals[0].0, totals[1].0),
-        delta(totals[0].1, totals[1].1)
-    );
-    let _ = writeln!(
-        out,
-        "Tokens = input + cache writes + cache reads + output, as reported by `claude -p --output-format json`. \
-         Cache reads are billed at a fraction of input price, so cost is the better single number."
+        "\nTokens = input + cache writes + cache reads + output, as reported by `claude -p --output-format json`; \
+         the rewritten variant also includes the rewrite call. Cache reads are billed at a fraction of input price, \
+         so cost is the better single number."
     );
     out
 }

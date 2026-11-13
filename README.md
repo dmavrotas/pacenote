@@ -84,6 +84,28 @@ The installer is idempotent and only touches pacenote's own entry. It keeps your
 ```
 </details>
 
+## Prompt rewriting (opt-in)
+
+pacenote can rewrite a vague or bloated prompt into a specific, token-efficient one, **using your own Claude access**. It uses `ANTHROPIC_API_KEY` if set, otherwise your logged-in Claude Code (`claude -p`), so a Claude subscription works without an API key.
+
+```sh
+pacenote rewrite "the tests are failing, fix them"
+# Run the test suite under `tests/` to see which tests fail, then fix the underlying
+# bugs in the `shop/` modules so they pass. Done when the full suite passes.
+# (rewritten via claude · claude-opus-5-5 · 1142 in / 77 out tokens · $0.0107)
+```
+
+To have the hook do it, run `pacenote hook install --rewrite`. When a prompt is flagged, the hook **holds** it and shows the suggested rewrite, in the prompt's language. Paste the rewrite (edit it if needed), or resubmit your original unchanged to send it as-is. The hook only holds a prompt when it has a rewrite to offer; if the rewrite fails or times out, you just get the usual warning.
+
+| Option | Default | |
+|---|---|---|
+| `--model` | `$PACENOTE_MODEL` or `claude-opus-5-5` | `claude-haiku-5-5` is ~10x cheaper per rewrite |
+| `--backend` | `auto` | `api` (needs `ANTHROPIC_API_KEY`) or `claude` (your Claude Code login) |
+| `--no-context` | off | By default the rewriter sees the repo name, `git ls-files` and `git status` (capped at 12 KB) so it can name real files. File *contents* are never sent. |
+| `--timeout` | 25 s | |
+
+**Privacy:** rewriting is the only pacenote feature that sends data anywhere. It sends the prompt (and, unless `--no-context`, the file list) to Anthropic under your own account, and only when you enable it.
+
 ## Languages
 
 Prompts are linted in **English, Greek, French, Spanish and German**, and findings are reported in the prompt's language. Mixed prompts ("διόρθωσε το bug στο `auth.rs`") work, because English technical vocabulary is always recognised alongside the detected language.
@@ -146,7 +168,7 @@ Latest results: [offline](bench/results/offline.md) · [end-to-end](bench/result
 - [ ] Per-session drill-down and "most expensive turns"
 - [ ] Context-bloat audit: oversized CLAUDE.md / memory files, MCP tool schema weight
 - [ ] `PostToolUse` analysis of repeated reads of the same file
-- [ ] Opt-in prompt rewriting (local rules first, optional small model)
+- [x] Opt-in prompt rewriting with your own Claude access (API key or Claude Code login)
 - [ ] Parallel scanning for very large transcript directories
 
 ## Development

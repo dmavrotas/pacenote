@@ -4,11 +4,13 @@
 //! - [`lint`]: heuristic prompt linting ([`lang`]: per-language word packs)
 //! - [`hook`]: Claude Code hook handlers
 //! - [`install`]: (un)registering the hook in settings.json
+//! - [`rewrite`]: opt-in prompt rewriting with the user's own Claude access
 
 pub mod hook;
 pub mod install;
 pub mod lang;
 pub mod lint;
 pub mod report;
+pub mod rewrite;
 pub mod stats;
 pub mod transcript;

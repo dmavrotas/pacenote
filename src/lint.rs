@@ -90,6 +90,12 @@ pub fn lint(prompt: &str) -> Vec<Finding> {
     findings
 }
 
+/// The main language of a prompt (for localized messages).
+pub fn detect_language(prompt: &str) -> &'static Lang {
+    let trimmed = prompt.trim();
+    lang::detect(&words(trimmed), trimmed)[0]
+}
+
 /// A single question ("why did you change that?") rather than a request.
 /// Greek uses `;` as its question mark; Spanish opens questions with `¿`.
 fn is_question(text: &str, words: &[String], packs: &[&Lang]) -> bool {
