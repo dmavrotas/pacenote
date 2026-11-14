@@ -21,23 +21,28 @@ The report prints to stdout and is saved to `target/bench/offline.md`. CI runs i
 ## End-to-end (spends real tokens)
 
 ```sh
-cargo run --release --example e2e -- --yes                     # 3 tasks × 2 variants × 3 runs, haiku
+cargo run --release --example e2e -- --yes                     # 8 tasks × 2 variants × 3 runs, haiku
 cargo run --release --example e2e -- --yes --model sonnet --runs 5 --json results.json
 ```
 
 Requires `claude` (logged in) and `python3`. With Haiku, a full run costs roughly $0.10–0.20.
 
-Each task gives Claude Code (`claude -p`) the same job twice, each time in a fresh copy of [`fixture/`](fixture), a small Python shop with two planted bugs:
+Each task gives Claude Code (`claude -p`) the same job in several **variants**, each time in a fresh copy of [`fixture/`](fixture), a small, bug-free Python shop into which the task injects its own bug (and its own log, if any):
 
-| Task | Vague prompt (as typically typed) | Specific prompt (after pacenote's advice) |
-|---|---|---|
-| `failing-test` | "pagination is broken, can you fix it" | names `paginate()`, the symptom, and the test command |
-| `production-error` | "checkout is failing in production, here are the logs: ⟨35 KB log⟩ fix it" | quotes the error, points at `logs/app.log`, names the test |
-| `red-ci` | "the tests are failing, fix them" | names the failing test files and says "fix shop/, not the tests" |
+| Variant | Prompt sent |
+|---|---|
+| `vague` | how the task is typically typed ("the tests are failing, fix them") |
+| `specific` | the same request after following pacenote's lint advice: *where* and *what done looks like*, never *how* |
+| `rewrite-local` | the vague prompt after `pacenote rewrite` (local mode) |
+| `rewrite-llm` | the vague prompt after `pacenote rewrite --mode llm` (`--rewrite-model`); the rewrite call's tokens and cost are counted against it |
 
-The specific prompts say *where* and *what done looks like*. They never say *how* to fix the bug.
+Tasks are split into **dev** (`failing-test`, `production-error`, `red-ci`: used while developing) and **held-out** (`stock-report`, `signup-email`, `top-products`, `red-ci-2`, `profile-crash`). The held-out tasks were committed before the rewrite-grounding work, and their results are reported, never tuned against.
 
-**Rewrite variant.** `--rewrite` adds a third variant: the vague prompt is first run through `pacenote rewrite` (with `--rewrite-model`) inside the fresh copy, and the rewrite call's tokens and cost are counted against it. Each attempt is kept in `results/`: v1 (Opus rewriter, before the context fix), v2, and the current one.
+```sh
+cargo run --release --example e2e -- --check-fixture        # free: fixture is clean, each bug breaks its tests
+cargo run --release --example e2e -- --show-local           # free: print each task's local rewrite
+cargo run --release --example e2e -- --yes --split holdout --variants vague,specific,rewrite-local
+```
 
 **Scoring.** After each run, the fixture's unit tests decide success. A cheap run that didn't fix the bug counts as a failure, not a saving. Token counts and cost come from `claude -p --output-format json`.
 
