@@ -36,6 +36,10 @@ pub struct Messages {
     /// `{n}` is replaced with the token estimate.
     pub large_paste: &'static str,
     pub no_done_criteria: &'static str,
+    /// Header when the hook holds a prompt; `{codes}` lists the findings.
+    pub held: &'static str,
+    /// How to proceed after a hold.
+    pub hold_hint: &'static str,
 }
 
 /// Lowercase and strip diacritics so word lists don't need every spelling.
@@ -187,6 +191,8 @@ pub static EN: Lang = Lang {
                       relevant part (e.g. the first error and its stack trace).",
         no_done_criteria: "Say what \"done\" looks like (e.g. \"the tests in auth/ pass\", \
                            \"returns 404 for unknown ids\") so Claude knows when to stop.",
+        held: "Prompt held by pacenote ({codes}). Suggested rewrite:",
+        hold_hint: "Paste the rewrite (edit it if needed), or resubmit your original prompt unchanged to send it as-is.",
     },
 };
 
@@ -239,6 +245,8 @@ pub static EL: Lang = Lang {
                       μόνο το σχετικό κομμάτι (π.χ. το πρώτο σφάλμα και το stack trace του).",
         no_done_criteria: "Πες πότε θεωρείται «έτοιμο» (π.χ. «περνάνε τα τεστ στο auth/», \
                            «επιστρέφει 404 για άγνωστα id»), ώστε το Claude να ξέρει πότε να σταματήσει.",
+        held: "Το prompt κρατήθηκε από το pacenote ({codes}). Προτεινόμενη αναδιατύπωση:",
+        hold_hint: "Επικόλλησε την αναδιατύπωση (με αλλαγές αν χρειάζεται) ή ξαναστείλε το αρχικό prompt αυτούσιο για να σταλεί όπως είναι.",
     },
 };
 
@@ -300,6 +308,8 @@ pub static FR: Lang = Lang {
         no_done_criteria: "Dites à quoi ressemble « terminé » (par ex. « les tests de auth/ \
                            passent », « renvoie 404 pour un id inconnu ») pour que Claude sache \
                            quand s'arrêter.",
+        held: "Prompt retenu par pacenote ({codes}). Réécriture suggérée :",
+        hold_hint: "Collez la réécriture (modifiez-la si besoin), ou renvoyez votre prompt d'origine tel quel pour l'envoyer sans changement.",
     },
 };
 
@@ -358,6 +368,8 @@ pub static ES: Lang = Lang {
                       parte relevante (p. ej. el primer error y su stack trace).",
         no_done_criteria: "Di cuándo está «terminado» (p. ej. «pasan los tests de auth/», \
                            «devuelve 404 para ids desconocidos») para que Claude sepa cuándo parar.",
+        held: "pacenote retuvo el prompt ({codes}). Reescritura sugerida:",
+        hold_hint: "Pega la reescritura (edítala si hace falta) o reenvía tu prompt original sin cambios para enviarlo tal cual.",
     },
 };
 
@@ -419,6 +431,8 @@ pub static DE: Lang = Lang {
         no_done_criteria: "Beschreibe, wann es „fertig“ ist (z. B. „die Tests in auth/ laufen \
                            durch“, „liefert 404 für unbekannte IDs“), damit Claude weiß, wann es \
                            aufhören kann.",
+        held: "Prompt von pacenote zurückgehalten ({codes}). Vorgeschlagene Umformulierung:",
+        hold_hint: "Füge die Umformulierung ein (bei Bedarf angepasst) oder sende deinen ursprünglichen Prompt unverändert erneut, um ihn so zu schicken.",
     },
 };
 
