@@ -84,6 +84,17 @@ The installer is idempotent and only touches pacenote's own entry. It keeps your
 ```
 </details>
 
+## Languages
+
+Prompts are linted in **English, Greek, French, Spanish and German**, and findings are reported in the prompt's language. Mixed prompts ("διόρθωσε το bug στο `auth.rs`") work, because English technical vocabulary is always recognised alongside the detected language.
+
+```
+$ pacenote lint "διόρθωσέ το"
+pacenote [vague-target] Δεν υπάρχει συγκεκριμένος στόχος. Ανάφερε το αρχείο, τη συνάρτηση ή το ακριβές μήνυμα σφάλματος, …
+```
+
+Each language has a word pack in [`src/lang.rs`](src/lang.rs) and labelled prompts in `bench/prompts.<lang>.jsonl`. Adding a language means adding both; the benchmark scores it automatically.
+
 ## Lint rules
 
 | Code | Severity | Fires when |
@@ -123,7 +134,7 @@ Latest results: [offline](bench/results/offline.md) · [end-to-end](bench/result
 | | Result |
 |---|---|
 | `stats` accuracy vs ground truth | exact (a naive per-line sum overcounts by ~150%) |
-| `vague-target` on held-out prompts | 100% precision, 88% recall |
+| `vague-target` on held-out prompts (5 languages) | 100% precision, 94–100% recall |
 | hook overhead per prompt | ~1.5 ms p50 |
 | scan throughput | ~740 MB/s |
 

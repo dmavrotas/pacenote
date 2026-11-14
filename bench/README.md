@@ -14,7 +14,7 @@ The report prints to stdout and is saved to `target/bench/offline.md`. CI runs i
 | Section | What it proves |
 |---|---|
 | **Stats accuracy** | Synthetic transcripts with known ground truth: each API call is written as 1–4 lines (as Claude Code does), mixed with malformed and `<synthetic>` lines. pacenote's totals must match exactly, and the bench **fails** otherwise. A naive per-line sum is shown for comparison. |
-| **Lint quality** | Precision/recall of `vague-target` on everyday engineering prompts labelled by hand: [`prompts.jsonl`](prompts.jsonl) (dev set) and [`prompts-holdout.jsonl`](prompts-holdout.jsonl) (written before the current rule, never used to tune it). Misclassified prompts are listed, not hidden. |
+| **Lint quality** | Precision/recall of `vague-target` on everyday engineering prompts labelled by hand, per language (en, el, fr, es, de): `prompts[.<lang>].jsonl` (dev sets, used for tuning) and `prompts-holdout[.<lang>].jsonl` (written before the rules, never used to tune them). Misclassified prompts are listed, not hidden. |
 | **Throughput** | `stats` scan speed and in-process `lint` cost. |
 | **Hook latency** | The delay `pacenote hook prompt` adds to every prompt you submit (process spawn included). |
 
@@ -45,4 +45,4 @@ The specific prompts say *where* and *what done looks like*. They never say *how
 
 ## Contributing prompts
 
-The lint corpus improves with independent labels. Add everyday prompts you actually send, labelled by whether Claude would have to guess or search for the target, to `prompts-holdout.jsonl` in a PR, ideally without first checking what pacenote says about them.
+The lint corpus improves with independent labels, especially from **native speakers**: the non-English corpora and word packs were written by a non-native author. Add everyday prompts you actually send, labelled by whether Claude would have to guess or search for the target, to `prompts-holdout.jsonl` in a PR, ideally without first checking what pacenote says about them.

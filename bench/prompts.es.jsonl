@@ -1,0 +1,41 @@
+{"category": "vague", "vague": true, "prompt": "arréglalo"}
+{"category": "vague", "vague": true, "prompt": "arregla el bug"}
+{"category": "vague", "vague": true, "prompt": "¿puedes arreglar esto?"}
+{"category": "vague", "vague": true, "prompt": "no funciona, arréglalo"}
+{"category": "vague", "vague": true, "prompt": "hazlo más rápido"}
+{"category": "vague", "vague": true, "prompt": "mejora el código"}
+{"category": "vague", "vague": true, "prompt": "añade manejo de errores"}
+{"category": "vague", "vague": true, "prompt": "agrega logs"}
+{"category": "vague", "vague": true, "prompt": "escribe tests para esto"}
+{"category": "vague", "vague": true, "prompt": "el build está en rojo"}
+{"category": "vague", "vague": true, "prompt": "resuelve el problema"}
+{"category": "vague", "vague": true, "prompt": "limpia el código"}
+{"category": "vague", "vague": true, "prompt": "refactoriza esto"}
+{"category": "vague", "vague": true, "prompt": "la app se cae, arréglala"}
+{"category": "vague", "vague": true, "prompt": "actualiza la documentación"}
+{"category": "specific", "vague": false, "prompt": "corrige el off-by-one en paginate() para que pase tests/test_pagination.py"}
+{"category": "specific", "vague": false, "prompt": "añade reintentos con backoff exponencial en http/client.go, máximo 3 intentos"}
+{"category": "specific", "vague": false, "prompt": "el endpoint /users devuelve 500 cuando falta el email, debe devolver 400"}
+{"category": "specific", "vague": false, "prompt": "escribe tests unitarios para parse_duration() en utils/time.py"}
+{"category": "specific", "vague": false, "prompt": "arregla el NullPointerException en OrderController.checkout()"}
+{"category": "specific", "vague": false, "prompt": "renombra get_user a fetch_user en todo el proyecto"}
+{"category": "specific", "vague": false, "prompt": "sube axios a 1.7 en package.json y corrige los errores de tipos"}
+{"category": "specific", "vague": false, "prompt": "añade un índice en orders(customer_id, created_at) en una nueva migración"}
+{"category": "specific", "vague": false, "prompt": "el formulario de login se envía dos veces al pulsar Enter, arréglalo en LoginForm.tsx"}
+{"category": "specific", "vague": false, "prompt": "haz el Dockerfile multi-stage para que la imagen final no incluya el toolchain de Go"}
+{"category": "specific", "vague": false, "prompt": "arregla el error \"connection refused\" al arrancar el worker"}
+{"category": "specific", "vague": false, "prompt": "añade paginación limit/offset a GET /api/products"}
+{"category": "conversational", "vague": false, "prompt": "sí"}
+{"category": "conversational", "vague": false, "prompt": "vale"}
+{"category": "conversational", "vague": false, "prompt": "adelante"}
+{"category": "conversational", "vague": false, "prompt": "continúa"}
+{"category": "conversational", "vague": false, "prompt": "perfecto, ¡gracias!"}
+{"category": "conversational", "vague": false, "prompt": "¿qué hace esta función?"}
+{"category": "conversational", "vague": false, "prompt": "¿por qué cambiaste eso?"}
+{"category": "conversational", "vague": false, "prompt": "enséñame el diff"}
+{"category": "conversational", "vague": false, "prompt": "haz commit"}
+{"category": "conversational", "vague": false, "prompt": "espera, para"}
+{"category": "hard", "vague": true, "prompt": "arregla los tests que fallan"}
+{"category": "hard", "vague": true, "prompt": "actualiza la documentación"}
+{"category": "hard", "vague": false, "prompt": "arréglalo igual que el anterior"}
+{"category": "hard", "vague": false, "prompt": "arregla el bug en el que el total del carrito queda negativo con un cupón del 100%"}

@@ -1,0 +1,41 @@
+{"category": "vague", "vague": true, "prompt": "διόρθωσέ το"}
+{"category": "vague", "vague": true, "prompt": "διόρθωσε το bug"}
+{"category": "vague", "vague": true, "prompt": "μπορείς να το φτιάξεις;"}
+{"category": "vague", "vague": true, "prompt": "δεν δουλεύει, φτιάξ' το"}
+{"category": "vague", "vague": true, "prompt": "κάν' το πιο γρήγορο"}
+{"category": "vague", "vague": true, "prompt": "βελτίωσε τον κώδικα"}
+{"category": "vague", "vague": true, "prompt": "πρόσθεσε error handling"}
+{"category": "vague", "vague": true, "prompt": "πρόσθεσε logging"}
+{"category": "vague", "vague": true, "prompt": "γράψε τεστ γι' αυτό"}
+{"category": "vague", "vague": true, "prompt": "το build είναι κόκκινο"}
+{"category": "vague", "vague": true, "prompt": "διόρθωσε το πρόβλημα"}
+{"category": "vague", "vague": true, "prompt": "καθάρισε τον κώδικα"}
+{"category": "vague", "vague": true, "prompt": "κάνε refactor σε αυτό"}
+{"category": "vague", "vague": true, "prompt": "η εφαρμογή σκάει, διόρθωσέ την"}
+{"category": "vague", "vague": true, "prompt": "ενημέρωσε τα docs"}
+{"category": "specific", "vague": false, "prompt": "διόρθωσε το off-by-one στη paginate() ώστε να περνάει το tests/test_pagination.py"}
+{"category": "specific", "vague": false, "prompt": "πρόσθεσε retry με exponential backoff στο http/client.go, μέχρι 3 προσπάθειες"}
+{"category": "specific", "vague": false, "prompt": "το endpoint /users επιστρέφει 500 όταν λείπει το email, κάνε το να επιστρέφει 400"}
+{"category": "specific", "vague": false, "prompt": "γράψε unit tests για τη parse_duration() στο utils/time.py"}
+{"category": "specific", "vague": false, "prompt": "διόρθωσε το null pointer στο OrderController.checkout()"}
+{"category": "specific", "vague": false, "prompt": "μετονόμασε το get_user σε fetch_user σε όλο το project"}
+{"category": "specific", "vague": false, "prompt": "ανέβασε το axios στην 1.7 στο package.json και διόρθωσε τα type errors"}
+{"category": "specific", "vague": false, "prompt": "πρόσθεσε index στο orders(customer_id, created_at) με νέο migration"}
+{"category": "specific", "vague": false, "prompt": "η φόρμα σύνδεσης υποβάλλεται δύο φορές όταν πατάς Enter, διόρθωσέ το στο LoginForm.tsx"}
+{"category": "specific", "vague": false, "prompt": "κάνε το Dockerfile multi-stage ώστε η τελική εικόνα να μην έχει το Go toolchain"}
+{"category": "specific", "vague": false, "prompt": "διόρθωσε το σφάλμα \"connection refused\" όταν ξεκινάει ο worker"}
+{"category": "specific", "vague": false, "prompt": "πρόσθεσε σελιδοποίηση με limit/offset στο GET /api/products"}
+{"category": "conversational", "vague": false, "prompt": "ναι"}
+{"category": "conversational", "vague": false, "prompt": "οκ"}
+{"category": "conversational", "vague": false, "prompt": "προχώρα"}
+{"category": "conversational", "vague": false, "prompt": "συνέχισε"}
+{"category": "conversational", "vague": false, "prompt": "τέλεια, ευχαριστώ!"}
+{"category": "conversational", "vague": false, "prompt": "τι κάνει αυτή η συνάρτηση;"}
+{"category": "conversational", "vague": false, "prompt": "γιατί το άλλαξες αυτό;"}
+{"category": "conversational", "vague": false, "prompt": "δείξε μου το diff"}
+{"category": "conversational", "vague": false, "prompt": "κάνε commit"}
+{"category": "conversational", "vague": false, "prompt": "περίμενε, σταμάτα"}
+{"category": "hard", "vague": true, "prompt": "διόρθωσε τα τεστ που αποτυγχάνουν"}
+{"category": "hard", "vague": true, "prompt": "ενημέρωσε τα docs"}
+{"category": "hard", "vague": false, "prompt": "διόρθωσέ το με τον ίδιο τρόπο όπως το προηγούμενο"}
+{"category": "hard", "vague": false, "prompt": "διόρθωσε το bug όπου το σύνολο του καλαθιού γίνεται αρνητικό με κουπόνι 100%"}

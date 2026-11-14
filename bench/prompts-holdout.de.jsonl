@@ -1,0 +1,16 @@
+{"category": "vague", "vague": true, "prompt": "repariere das Problem"}
+{"category": "vague", "vague": true, "prompt": "das geht nicht mehr, kannst du es beheben?"}
+{"category": "vague", "vague": true, "prompt": "verbessere die Performance"}
+{"category": "vague", "vague": true, "prompt": "füge mehr Tests hinzu"}
+{"category": "vague", "vague": true, "prompt": "behebe die Warnungen"}
+{"category": "vague", "vague": true, "prompt": "sorg dafür, dass es funktioniert"}
+{"category": "specific", "vague": false, "prompt": "behebe den KeyError in load_config, wenn CONFIG_PATH nicht gesetzt ist"}
+{"category": "specific", "vague": false, "prompt": "füge Rate Limiting von 100 Anfragen pro Minute zur öffentlichen API hinzu"}
+{"category": "specific", "vague": false, "prompt": "stell das Session-Cookie in middleware/session.go auf SameSite=Lax um"}
+{"category": "specific", "vague": false, "prompt": "mach die Benutzertabelle auf der Admin-Seite nach Registrierungsdatum sortierbar"}
+{"category": "conversational", "vague": false, "prompt": "ja, mach das"}
+{"category": "conversational", "vague": false, "prompt": "was sind die Trade-offs?"}
+{"category": "conversational", "vague": false, "prompt": "wo wird das konfiguriert?"}
+{"category": "conversational", "vague": false, "prompt": "warum ist der Test fehlgeschlagen?"}
+{"category": "hard", "vague": true, "prompt": "repariere die CI"}
+{"category": "hard", "vague": false, "prompt": "wende denselben Fix auf die anderen zwei Services an"}
