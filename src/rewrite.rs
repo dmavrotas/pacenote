@@ -379,49 +379,10 @@ pub fn repo_context(dir: &Path) -> String {
         }
         None => {
             context.push_str("\nFiles:\n");
-            let mut files = Vec::new();
-            list_files(dir, dir, &mut files);
-            files.sort();
-            context.push_str(&files.join("\n"));
+            context.push_str(&crate::ground::project_files(dir).join("\n"));
         }
     }
     truncate_bytes(&context, MAX_CONTEXT_BYTES)
-}
-
-/// Directories never worth describing to the rewriter.
-const SKIP_DIRS: &[&str] = &[
-    "target",
-    "node_modules",
-    "__pycache__",
-    "dist",
-    "build",
-    "venv",
-];
-const MAX_LISTED_FILES: usize = 500;
-
-/// Relative paths of files under `dir` (outside git), skipping hidden and
-/// build directories.
-fn list_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.filter_map(Result::ok) {
-        if out.len() >= MAX_LISTED_FILES {
-            return;
-        }
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if name.starts_with('.') {
-            continue;
-        }
-        let path = entry.path();
-        if path.is_dir() {
-            if !SKIP_DIRS.contains(&name.as_str()) {
-                list_files(root, &path, out);
-            }
-        } else if let Ok(rel) = path.strip_prefix(root) {
-            out.push(rel.to_string_lossy().replace('\\', "/"));
-        }
-    }
 }
 
 fn cap_lines(text: &str, max: usize) -> String {

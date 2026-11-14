@@ -90,6 +90,18 @@ pub fn lint(prompt: &str) -> Vec<Finding> {
     findings
 }
 
+/// Words that could identify a target: the prompt's folded words that are
+/// not generic (or task verbs, or symptoms) in any of its languages.
+pub fn content_words(prompt: &str) -> Vec<String> {
+    let trimmed = prompt.trim();
+    let words = words(trimmed);
+    let packs = lang::detect(&words, trimmed);
+    words
+        .into_iter()
+        .filter(|w| !is_generic(w, &packs))
+        .collect()
+}
+
 /// The main language of a prompt (for localized messages).
 pub fn detect_language(prompt: &str) -> &'static Lang {
     let trimmed = prompt.trim();

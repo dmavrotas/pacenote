@@ -40,6 +40,10 @@ pub struct Messages {
     pub held: &'static str,
     /// How to proceed after a hold.
     pub hold_hint: &'static str,
+    /// Local rewrite hint; `{file}` is the likely target.
+    pub likely_location: &'static str,
+    /// Introduces a trimmed paste; `{n}` is the original line count.
+    pub excerpt_note: &'static str,
 }
 
 /// Lowercase and strip diacritics so word lists don't need every spelling.
@@ -193,6 +197,8 @@ pub static EN: Lang = Lang {
                            \"returns 404 for unknown ids\") so Claude knows when to stop.",
         held: "Prompt held by pacenote ({codes}). Suggested rewrite:",
         hold_hint: "Paste the rewrite (edit it if needed), or resubmit your original prompt unchanged to send it as-is.",
+        likely_location: "Likely location: `{file}`.",
+        excerpt_note: "First error from the pasted log ({n} lines; the rest omitted):",
     },
 };
 
@@ -247,6 +253,8 @@ pub static EL: Lang = Lang {
                            «επιστρέφει 404 για άγνωστα id»), ώστε το Claude να ξέρει πότε να σταματήσει.",
         held: "Το prompt κρατήθηκε από το pacenote ({codes}). Προτεινόμενη αναδιατύπωση:",
         hold_hint: "Επικόλλησε την αναδιατύπωση (με αλλαγές αν χρειάζεται) ή ξαναστείλε το αρχικό prompt αυτούσιο για να σταλεί όπως είναι.",
+        likely_location: "Πιθανή θέση: `{file}`.",
+        excerpt_note: "Το πρώτο σφάλμα από το log που επικολλήθηκε ({n} γραμμές· τα υπόλοιπα παραλείφθηκαν):",
     },
 };
 
@@ -310,6 +318,8 @@ pub static FR: Lang = Lang {
                            quand s'arrêter.",
         held: "Prompt retenu par pacenote ({codes}). Réécriture suggérée :",
         hold_hint: "Collez la réécriture (modifiez-la si besoin), ou renvoyez votre prompt d'origine tel quel pour l'envoyer sans changement.",
+        likely_location: "Emplacement probable : `{file}`.",
+        excerpt_note: "Première erreur du log collé ({n} lignes ; le reste est omis) :",
     },
 };
 
@@ -370,6 +380,8 @@ pub static ES: Lang = Lang {
                            «devuelve 404 para ids desconocidos») para que Claude sepa cuándo parar.",
         held: "pacenote retuvo el prompt ({codes}). Reescritura sugerida:",
         hold_hint: "Pega la reescritura (edítala si hace falta) o reenvía tu prompt original sin cambios para enviarlo tal cual.",
+        likely_location: "Ubicación probable: `{file}`.",
+        excerpt_note: "Primer error del log pegado ({n} líneas; se omite el resto):",
     },
 };
 
@@ -433,6 +445,8 @@ pub static DE: Lang = Lang {
                            aufhören kann.",
         held: "Prompt von pacenote zurückgehalten ({codes}). Vorgeschlagene Umformulierung:",
         hold_hint: "Füge die Umformulierung ein (bei Bedarf angepasst) oder sende deinen ursprünglichen Prompt unverändert erneut, um ihn so zu schicken.",
+        likely_location: "Wahrscheinlicher Ort: `{file}`.",
+        excerpt_note: "Erster Fehler aus dem eingefügten Log ({n} Zeilen; der Rest ist ausgelassen):",
     },
 };
 

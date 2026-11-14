@@ -208,3 +208,63 @@ fn hook_install_refuses_invalid_json() {
     assert!(!out.status.success());
     assert_eq!(fs::read_to_string(&path).unwrap(), "{ not json");
 }
+
+#[test]
+fn rewrite_local_names_target_or_exits_3() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(dir.path().join("src")).unwrap();
+    fs::write(dir.path().join("src/billing.rs"), "fn invoice_total() {}\n").unwrap();
+    fs::write(dir.path().join("src/auth.rs"), "fn login() {}\n").unwrap();
+
+    let out = pacenote()
+        .args(["rewrite", "billing is broken, fix it", "--dir"])
+        .arg(dir.path())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(String::from_utf8_lossy(&out.stdout).contains("`src/billing.rs`"));
+
+    let out = pacenote()
+        .args(["rewrite", "fix it", "--dir"])
+        .arg(dir.path())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(3), "nothing to add");
+}
+
+#[test]
+fn hook_local_rewrite_trims_a_pasted_log() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut log: String = (0..2_000)
+        .map(|i| format!("2026-10-30T14:00:00Z INFO request {i} ok\n"))
+        .collect();
+    log.push_str(
+        "2026-10-30T14:01:00Z ERROR checkout failed\nValueError: total cannot be negative\n",
+    );
+    let payload = json!({"prompt": format!("checkout fails, logs:\n\n{log}\n\nfix it"),
+                         "session_id": "cli-test-local", "cwd": dir.path()})
+    .to_string();
+    let mut child = pacenote()
+        .args(["hook", "prompt", "--rewrite"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(payload.as_bytes())
+        .unwrap();
+    let out = child.wait_with_output().unwrap();
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["decision"], "block");
+    let reason = v["reason"].as_str().unwrap();
+    assert!(
+        reason.contains("large-paste") && reason.contains("ValueError: total cannot be negative")
+    );
+    assert!(
+        reason.len() < 2_000,
+        "the suggestion is the excerpt, not the log"
+    );
+}

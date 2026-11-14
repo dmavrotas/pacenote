@@ -49,8 +49,9 @@ enum Command {
         #[arg(long)]
         strict: bool,
     },
-    /// Rewrite a prompt to be specific and token-efficient, using your own
-    /// Claude access (ANTHROPIC_API_KEY, or your logged-in Claude Code)
+    /// Rewrite a prompt to be specific and token-efficient: locally by
+    /// default (exit code 3 when there is nothing to add), or with your own
+    /// Claude access via --mode llm
     Rewrite {
         /// The prompt (default: stdin)
         text: Option<String>,
@@ -105,7 +106,11 @@ enum HookEvent {
 
 #[derive(clap::Args, Clone)]
 struct RewriteArgs {
-    /// Model for rewriting (default: $PACENOTE_MODEL or claude-haiku-5-5)
+    /// local: trim pastes and name the likely file (free, nothing leaves your
+    /// machine). llm: rewrite with Claude using your own access.
+    #[arg(long, value_enum, default_value_t = Mode::Local)]
+    mode: Mode,
+    /// Model for --mode llm (default: $PACENOTE_MODEL or claude-haiku-5-5)
     #[arg(long)]
     model: Option<String>,
     /// Where rewrites run
@@ -119,7 +124,56 @@ struct RewriteArgs {
     timeout: u64,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum Mode {
+    Local,
+    Llm,
+}
+
+/// A rewrite plus a one-line description of how it was made.
+struct Rewritten {
+    text: String,
+    changed: bool,
+    how: String,
+}
+
 impl RewriteArgs {
+    fn rewrite(&self, prompt: &str, dir: &Path) -> Result<Rewritten> {
+        match self.mode {
+            Mode::Local => {
+                let r = pacenote::ground::rewrite_local(prompt, dir);
+                let mut how = vec!["local".to_string()];
+                if let Some(target) = &r.target {
+                    how.push(format!("target {target}"));
+                }
+                if r.trimmed_bytes > 0 {
+                    how.push(format!("trimmed {} bytes of paste", r.trimmed_bytes));
+                }
+                if !r.changed {
+                    how.push("nothing to add; prompt unchanged".to_string());
+                }
+                Ok(Rewritten {
+                    changed: r.changed,
+                    text: r.text,
+                    how: how.join(" · "),
+                })
+            }
+            Mode::Llm => {
+                let rewriter = self.rewriter()?;
+                let r = rewriter.rewrite(prompt, &self.context(dir))?;
+                let cost = r.cost_usd.map_or(String::new(), |c| format!(" · ${c:.4}"));
+                Ok(Rewritten {
+                    changed: r.text.trim() != prompt.trim(),
+                    how: format!(
+                        "llm via {} · {} · {} in / {} out tokens{cost}",
+                        r.backend, rewriter.model, r.input_tokens, r.output_tokens
+                    ),
+                    text: r.text,
+                })
+            }
+        }
+    }
+
     fn rewriter(&self) -> Result<Rewriter> {
         Rewriter::new(
             self.backend,
@@ -139,6 +193,9 @@ impl RewriteArgs {
     /// Flags to forward when registering the hook.
     fn hook_args(&self) -> Vec<String> {
         let mut args = Vec::new();
+        if self.mode == Mode::Llm {
+            args.extend(["--mode".to_string(), "llm".to_string()]);
+        }
         if let Some(model) = &self.model {
             args.extend(["--model".to_string(), model.clone()]);
         }
@@ -236,16 +293,12 @@ fn main() -> Result<()> {
                 Some(t) => t,
                 None => read_stdin()?,
             };
-            let rewriter = options.rewriter()?;
-            let result = rewriter.rewrite(&text, &options.context(&dir))?;
+            let result = options.rewrite(&text, &dir)?;
             println!("{}", result.text);
-            let cost = result
-                .cost_usd
-                .map_or(String::new(), |c| format!(" · ${c:.4}"));
-            eprintln!(
-                "(rewritten via {} · {} · {} in / {} out tokens{cost})",
-                result.backend, rewriter.model, result.input_tokens, result.output_tokens
-            );
+            eprintln!("({})", result.how);
+            if !result.changed {
+                std::process::exit(3);
+            }
         }
         Command::Hook {
             event:
@@ -273,10 +326,7 @@ fn main() -> Result<()> {
                     hook::user_prompt_submit_with_rewrite(
                         &payload,
                         min,
-                        |prompt, cwd| {
-                            let rewriter = options.rewriter()?;
-                            Ok(rewriter.rewrite(prompt, &options.context(cwd))?.text)
-                        },
+                        |prompt, cwd| Ok(options.rewrite(prompt, cwd)?.text),
                         &std::env::temp_dir(),
                         now,
                     )

@@ -64,7 +64,7 @@ struct Args {
     /// Which tasks to run
     #[arg(long, value_enum, default_value_t = Split::All)]
     split: Split,
-    /// Comma-separated variants: vague, specific, rewrite-llm.
+    /// Comma-separated variants: vague, specific, rewrite-llm, rewrite-local.
     /// Rewrite variants rewrite the vague prompt; the rewrite's own tokens and
     /// cost are counted against them.
     #[arg(long, value_delimiter = ',', default_value = "vague,specific")]
@@ -73,6 +73,9 @@ struct Args {
     /// tests (free; no Claude calls)
     #[arg(long)]
     check_fixture: bool,
+    /// Print the local rewrite of each task's vague prompt (free; no Claude calls)
+    #[arg(long)]
+    show_local: bool,
     /// Model for the rewrite (default: pacenote's default)
     #[arg(long)]
     rewrite_model: Option<String>,
@@ -125,6 +128,17 @@ fn main() -> Result<()> {
         .collect();
     if args.check_fixture {
         return check_fixture(&args, &fixture, &tasks);
+    }
+    if args.show_local {
+        for task in &tasks {
+            let dir = prepare(&fixture, task)?;
+            let r = pacenote::ground::rewrite_local(&task.vague, dir.path());
+            println!(
+                "## {} (changed: {}, target: {:?}, trimmed: {} bytes)\n{}\n",
+                task.name, r.changed, r.target, r.trimmed_bytes, r.text
+            );
+        }
+        return Ok(());
     }
     for variant in &args.variants {
         if !VARIANTS.contains(&variant.as_str()) {
@@ -188,7 +202,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-const VARIANTS: &[&str] = &["vague", "specific", "rewrite-llm"];
+const VARIANTS: &[&str] = &["vague", "specific", "rewrite-llm", "rewrite-local"];
 
 /// The clean fixture must pass every test, and each task's bugs must break
 /// the tests it is scored on.
@@ -232,6 +246,11 @@ fn prompt_for(
                 r.cost_usd.unwrap_or(0.0),
             )
         }
+        "rewrite-local" => (
+            pacenote::ground::rewrite_local(&task.vague, dir).text,
+            0,
+            0.0,
+        ),
         _ => (task.vague.clone(), 0, 0.0),
     })
 }
