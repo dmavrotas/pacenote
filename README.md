@@ -84,28 +84,53 @@ The installer is idempotent and only touches pacenote's own entry. It keeps your
 ```
 </details>
 
-## Prompt rewriting (opt-in, experimental)
+## Prompt rewriting (opt-in)
 
-> **Experimental: it does not reliably save tokens yet.** In the end-to-end benchmark, prompts that a person made specific by following pacenote's lint advice cut tokens by **54%**. Automatic rewrites cut them by only **11%** and cost **10% more** overall, including the rewrite call. They help when the rewrite maps a vague area to the right file (failing-test task: −37% tokens), and they hurt when the agent should simply run the tests (red-CI task: +67%). See [the results](bench/results/e2e-haiku-rewrite.md) and earlier attempts ([v1](bench/results/e2e-haiku-rewrite-v1-opus.md), [v2](bench/results/e2e-haiku-rewrite-v2.md)).
+`pacenote rewrite` makes a prompt cheaper to act on. By default it runs **locally**: it's free and deterministic, and nothing leaves your machine. It does only two things, and only when the evidence is clear:
 
-pacenote can rewrite a vague or bloated prompt into a specific, token-efficient one, **using your own Claude access**. It uses `ANTHROPIC_API_KEY` if set, otherwise your logged-in Claude Code (`claude -p`), so a Claude subscription works without an API key.
+- **Trims pastes.** A pasted log becomes its first error block and stack trace.
+- **Names the likely file.** When one source file clearly matches the prompt's words (IDF-weighted, file names beat contents, test files excluded, and the file must win by 1.5×), it appends `Likely location: <file>`.
+
+Otherwise it leaves the prompt alone. "The tests are failing" is already an efficient instruction, so it exits with code 3 ("nothing to add").
 
 ```sh
-$ pacenote rewrite "pagination is broken, can you fix it"
-# Fix the bug in shop/pagination.py so the pagination tests in tests/test_pagination.py pass.
-# (rewritten via claude · claude-haiku-5-5 · 1182 in / 38 out tokens · $0.0003)
+$ pacenote rewrite "checkout is failing in production, here are the logs: <35 KB of logs> fix it"
+checkout is failing in production, here are the logs:
+
+First error from the pasted log (407 lines; the rest omitted):
+  2026-10-30T14:03:37.412Z ERROR request_id=req-5f3a2c method=POST path=/api/checkout status=500
+  Traceback (most recent call last): …
+  ValueError: total cannot be negative
+
+fix it
+(local · trimmed 42714 bytes of paste)
 ```
 
-To have the hook do it, run `pacenote hook install --rewrite`. When a prompt is flagged, the hook **holds** it and shows the suggested rewrite, in the prompt's language. Paste the rewrite (edit it if needed), or resubmit your original unchanged to send it as-is. The hook only holds a prompt when it has a rewrite to offer; if the rewrite fails or times out, you just get the usual warning.
+**Measured** (end-to-end benchmark, held-out tasks never used for tuning, 5 runs each, every run fixed its bug):
+
+| vs the vague prompt | tokens | cost |
+|---|---:|---:|
+| `--mode local` (default) | **−17%** | **−24%** |
+| `--mode llm` (Haiku, experimental) | −11% | +1% |
+| a person writing the specific prompt pacenote's lint asks for | −51% | −45% |
+
+Most of the local saving comes from paste trimming: −54% cost on a pasted crash log. The file hint helped on 2 of 3 held-out tasks where it applied and was neutral on the third. `--mode llm` uses your own Claude access (`ANTHROPIC_API_KEY`, else your Claude Code login), so a subscription works without an API key. It hasn't beaten local mode yet, so it stays experimental. Details: [bench/results](bench/results/e2e-grounding-holdout.md).
+
+To have the hook do it, run `pacenote hook install --rewrite`. Then:
+
+- **Pasted logs are held.** A prompt flagged for a large paste is held, and the trimmed version is shown, in the prompt's language. Paste it (edit it if needed), or resubmit your original unchanged to send it as-is.
+- **File hints are silent.** When one source file clearly matches a task request, the prompt goes through as typed, and Claude gets one line, `Likely location: <file>` (~10 tokens, only when confident). You see a short `pacenote [hint]` note.
+- **Otherwise nothing happens.** Replies and questions never get hints. With hints on, the hook adds ~2–3 ms to a reply and ~10–30 ms to a task prompt in a typical repo.
 
 | Option | Default | |
 |---|---|---|
+| `--mode` | `local` | `local` (free, offline) or `llm` (your Claude access) |
 | `--model` | `$PACENOTE_MODEL` or `claude-haiku-5-5` | the cheapest current model; a rewrite costs ~$0.0003 |
-| `--backend` | `auto` | `api` (needs `ANTHROPIC_API_KEY`) or `claude` (your Claude Code login) |
-| `--no-context` | off | By default the rewriter sees the repo name, `git ls-files` and `git status` (capped at 12 KB) so it can name real files. File *contents* are never sent. |
+| `--backend` (llm) | `auto` | `api` (needs `ANTHROPIC_API_KEY`) or `claude` (your Claude Code login) |
+| `--no-context` (llm) | off | By default the rewriter sees the repo name, `git ls-files` and `git status` (capped at 12 KB) so it can name real files. File *contents* are never sent. |
 | `--timeout` | 25 s | |
 
-**Privacy:** rewriting is the only pacenote feature that sends data anywhere. It sends the prompt (and, unless `--no-context`, the file list) to Anthropic under your own account, and only when you enable it.
+**Privacy:** local mode sends nothing anywhere. `--mode llm` is the only pacenote feature that sends data: it sends the prompt (and, unless `--no-context`, the file list) to Anthropic under your own account, and only when you choose it.
 
 ## Languages
 
@@ -156,7 +181,7 @@ Latest results: [offline](bench/results/offline.md) · [end-to-end](bench/result
 
 | | Result |
 |---|---|
-| automatic `pacenote rewrite` vs vague prompts | −11% tokens, +10% cost (experimental, see above) |
+| `pacenote rewrite` (local, held-out tasks) vs vague prompts | −17% tokens, −24% cost |
 | `stats` accuracy vs ground truth | exact (a naive per-line sum overcounts by ~150%) |
 | `vague-target` on held-out prompts (5 languages) | 100% precision, 94–100% recall |
 | hook overhead per prompt | ~1.5 ms p50 |
@@ -171,7 +196,7 @@ Latest results: [offline](bench/results/offline.md) · [end-to-end](bench/result
 - [ ] Context-bloat audit: oversized CLAUDE.md / memory files, MCP tool schema weight
 - [ ] `PostToolUse` analysis of repeated reads of the same file
 - [x] Opt-in prompt rewriting with your own Claude access (API key or Claude Code login), experimental
-- [ ] Make rewriting pay off: only rewrite when it adds information the agent lacks (mapping a vague area to a file), never for "run the tests"-style tasks
+- [x] Grounded local rewriting: trim pastes, name the likely file, otherwise leave the prompt alone
 - [ ] Parallel scanning for very large transcript directories
 
 ## Development

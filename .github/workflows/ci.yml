@@ -33,19 +33,14 @@ jobs:
       - run: cat target/bench/offline.md >> "$GITHUB_STEP_SUMMARY"
 
   fixture:
-    # The e2e fixture must keep exactly its two planted bugs.
+    # The e2e fixture must be clean, and every task's injected bug must
+    # break the tests it is scored on. Free: no Claude calls.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - working-directory: bench/fixture
-        run: |
-          python -m unittest tests.test_inventory tests.test_users tests.test_report
-          for bug in tests.test_pagination tests.test_pricing; do
-            if python -m unittest "$bug" 2>/dev/null; then
-              echo "::error::$bug passes, but the fixture must keep its planted bug"
-              exit 1
-            fi
-          done
+      - run: cargo run --release --example e2e -- --check-fixture --python python

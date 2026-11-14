@@ -29,10 +29,13 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
+mod tasks;
+
 use pacenote::lint::lint;
 use pacenote::rewrite::{BackendChoice, Rewriter, repo_context};
 use serde::Serialize;
 use serde_json::Value;
+use tasks::{Split, Task};
 
 #[derive(Parser)]
 #[command(about = "End-to-end token benchmark: vague vs specific prompts in Claude Code")]
@@ -58,10 +61,21 @@ struct Args {
     /// Write raw per-run results as JSON
     #[arg(long, value_name = "PATH")]
     json: Option<PathBuf>,
-    /// Also run a third variant: the vague prompt after `pacenote rewrite`
-    /// (the rewrite's own tokens and cost are counted against it)
+    /// Which tasks to run
+    #[arg(long, value_enum, default_value_t = Split::All)]
+    split: Split,
+    /// Comma-separated variants: vague, specific, rewrite-llm, rewrite-local.
+    /// Rewrite variants rewrite the vague prompt; the rewrite's own tokens and
+    /// cost are counted against them.
+    #[arg(long, value_delimiter = ',', default_value = "vague,specific")]
+    variants: Vec<String>,
+    /// Only check that the fixture is clean and every task's bug breaks its
+    /// tests (free; no Claude calls)
     #[arg(long)]
-    rewrite: bool,
+    check_fixture: bool,
+    /// Print the local rewrite of each task's vague prompt (free; no Claude calls)
+    #[arg(long)]
+    show_local: bool,
     /// Model for the rewrite (default: pacenote's default)
     #[arg(long)]
     rewrite_model: Option<String>,
@@ -70,58 +84,10 @@ struct Args {
     yes: bool,
 }
 
-struct Task {
-    name: &'static str,
-    /// unittest targets that must pass afterwards
-    verify: &'static [&'static str],
-    vague: String,
-    specific: String,
-}
-
-fn tasks(log: &str) -> Vec<Task> {
-    vec![
-        Task {
-            name: "failing-test",
-            verify: &["tests.test_pagination"],
-            vague: "pagination is broken, can you fix it".into(),
-            specific: "`paginate()` in shop/pagination.py returns the wrong items: page 1 should \
-                       be [1, 2, 3] for ITEMS 1..10 with size 3. Fix it so \
-                       `python3 -m unittest tests.test_pagination` passes."
-                .into(),
-        },
-        Task {
-            name: "production-error",
-            verify: &["tests.test_pricing"],
-            vague: format!(
-                "checkout is failing in production, here are the logs:\n\n{log}\n\nfix it"
-            ),
-            specific: "Checkout raises `ValueError: total cannot be negative` from order_total() \
-                       in shop/pricing.py when a 10% discount is applied (first ERROR in \
-                       logs/app.log). Fix the cause so `python3 -m unittest tests.test_pricing` \
-                       passes."
-                .into(),
-        },
-        Task {
-            name: "red-ci",
-            verify: &[
-                "tests.test_pagination",
-                "tests.test_pricing",
-                "tests.test_inventory",
-                "tests.test_users",
-                "tests.test_report",
-            ],
-            vague: "the tests are failing, fix them".into(),
-            specific: "`python3 -m unittest` fails in tests/test_pagination.py and \
-                       tests/test_pricing.py. Fix the bugs in shop/ (not the tests) so the whole \
-                       suite passes."
-                .into(),
-        },
-    ]
-}
-
 #[derive(Serialize)]
 struct Run {
     task: &'static str,
+    split: &'static str,
     variant: String,
     run: usize,
     success: bool,
@@ -134,7 +100,7 @@ struct Run {
     output_tokens: u64,
     cost_usd: f64,
     duration_ms: u64,
-    /// The rewrite step's own usage (rewritten variant only), included in
+    /// The rewrite step's own usage (rewrite variants only), included in
     /// `total_tokens()` and `cost_usd`.
     rewrite_tokens: u64,
     rewrite_cost_usd: f64,
@@ -155,18 +121,36 @@ impl Run {
 fn main() -> Result<()> {
     let args = Args::parse();
     let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("bench/fixture");
-    let log = app_log();
-    let tasks: Vec<Task> = tasks(&log)
+    let tasks: Vec<Task> = tasks::tasks()
         .into_iter()
+        .filter(|t| args.split == Split::All || t.split == args.split)
         .filter(|t| args.task.as_deref().is_none_or(|f| t.name.contains(f)))
         .collect();
-    let variants: Vec<&str> = if args.rewrite {
-        vec!["vague", "specific", "rewritten"]
-    } else {
-        vec!["vague", "specific"]
-    };
-    let rewriter = args
-        .rewrite
+    if args.check_fixture {
+        return check_fixture(&args, &fixture, &tasks);
+    }
+    if args.show_local {
+        for task in &tasks {
+            let dir = prepare(&fixture, task)?;
+            let r = pacenote::ground::rewrite_local(&task.vague, dir.path());
+            println!(
+                "## {} (changed: {}, target: {:?}, trimmed: {} bytes)\n{}\n",
+                task.name, r.changed, r.target, r.trimmed_bytes, r.text
+            );
+        }
+        return Ok(());
+    }
+    for variant in &args.variants {
+        if !VARIANTS.contains(&variant.as_str()) {
+            bail!(
+                "unknown variant `{variant}`; expected one of {}",
+                VARIANTS.join(", ")
+            );
+        }
+    }
+    let variants: Vec<&str> = args.variants.iter().map(String::as_str).collect();
+    let rewriter = variants
+        .contains(&"rewrite-llm")
         .then(|| {
             Rewriter::new(
                 BackendChoice::Auto,
@@ -186,17 +170,10 @@ fn main() -> Result<()> {
     }
     check_tool(&args.claude, &["--version"])?;
     check_tool(&args.python, &["--version"])?;
+    check_fixture(&args, &fixture, &tasks)?;
 
     let mut runs = Vec::new();
     for task in &tasks {
-        // Sanity: the bug must be present before Claude touches anything.
-        let dir = prepare(&fixture, &log)?;
-        if verify(&args.python, dir.path(), task.verify)? {
-            bail!(
-                "fixture tests for `{}` already pass; the fixture is broken",
-                task.name
-            );
-        }
         for variant in variants.iter().copied() {
             for run in 1..=args.runs {
                 eprint!(
@@ -204,17 +181,7 @@ fn main() -> Result<()> {
                     runs.len() + 1,
                     task.name
                 );
-                let result = run_once(
-                    &args,
-                    &fixture,
-                    &log,
-                    task,
-                    variant,
-                    (variant == "rewritten")
-                        .then_some(rewriter.as_ref())
-                        .flatten(),
-                    run,
-                )?;
+                let result = run_once(&args, &fixture, task, variant, rewriter.as_ref(), run)?;
                 eprintln!(
                     "{} · {} tokens · {} turns · ${:.4}",
                     if result.success { "pass" } else { "FAIL" },
@@ -235,34 +202,72 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run_once(
-    args: &Args,
-    fixture: &Path,
-    log: &str,
-    task: &Task,
+const VARIANTS: &[&str] = &["vague", "specific", "rewrite-llm", "rewrite-local"];
+
+/// The clean fixture must pass every test, and each task's bugs must break
+/// the tests it is scored on.
+fn check_fixture(args: &Args, fixture: &Path, tasks: &[Task]) -> Result<()> {
+    let clean = tempfile::tempdir()?;
+    copy_dir(fixture, clean.path())?;
+    if !verify(&args.python, clean.path(), tasks::ALL_TESTS)? {
+        bail!("the clean fixture fails its own tests");
+    }
+    for task in tasks {
+        let dir = prepare(fixture, task)?;
+        if verify(&args.python, dir.path(), task.verify)? {
+            bail!(
+                "task `{}`: tests still pass with the bug injected",
+                task.name
+            );
+        }
+    }
+    eprintln!(
+        "fixture ok: clean suite passes; {} task bugs each break their tests",
+        tasks.len()
+    );
+    Ok(())
+}
+
+/// The prompt a variant sends, plus the rewrite's own tokens and cost.
+fn prompt_for(
     variant: &str,
+    task: &Task,
+    dir: &Path,
     rewriter: Option<&Rewriter>,
-    run: usize,
-) -> Result<Run> {
-    let dir = prepare(fixture, log)?;
-    let start = Instant::now();
-    // The rewrite happens inside the fresh copy, exactly as the hook would see it.
-    let prompt = if variant == "specific" {
-        &task.specific
-    } else {
-        &task.vague
-    };
-    let (prompt, rewrite_tokens, rewrite_cost_usd) = match rewriter {
-        Some(rewriter) => {
-            let r = rewriter.rewrite(prompt, &repo_context(dir.path()))?;
+) -> Result<(String, u64, f64)> {
+    Ok(match variant {
+        "specific" => (task.specific.clone(), 0, 0.0),
+        "rewrite-llm" => {
+            let rewriter = rewriter.expect("rewriter is built when rewrite-llm is selected");
+            let r = rewriter.rewrite(&task.vague, &repo_context(dir))?;
             (
                 r.text,
                 r.input_tokens + r.output_tokens,
                 r.cost_usd.unwrap_or(0.0),
             )
         }
-        None => (prompt.to_string(), 0, 0.0),
-    };
+        "rewrite-local" => (
+            pacenote::ground::rewrite_local(&task.vague, dir).text,
+            0,
+            0.0,
+        ),
+        _ => (task.vague.clone(), 0, 0.0),
+    })
+}
+
+fn run_once(
+    args: &Args,
+    fixture: &Path,
+    task: &Task,
+    variant: &str,
+    rewriter: Option<&Rewriter>,
+    run: usize,
+) -> Result<Run> {
+    let dir = prepare(fixture, task)?;
+    let start = Instant::now();
+    // Rewrites happen inside the fresh copy, exactly as the hook would see it.
+    let (prompt, rewrite_tokens, rewrite_cost_usd) =
+        prompt_for(variant, task, dir.path(), rewriter)?;
     let prompt = prompt.as_str();
     let mut child = Command::new(&args.claude)
         .args([
@@ -306,6 +311,11 @@ fn run_once(
 
     Ok(Run {
         task: task.name,
+        split: if task.split == Split::Dev {
+            "dev"
+        } else {
+            "held-out"
+        },
         variant: variant.to_string(),
         run,
         success: !timed_out && verify(&args.python, dir.path(), task.verify)?,
@@ -324,12 +334,26 @@ fn run_once(
     })
 }
 
-/// Fresh copy of the fixture, plus the generated application log.
-fn prepare(fixture: &Path, log: &str) -> Result<tempfile::TempDir> {
+/// Fresh copy of the fixture with the task's bugs injected and its log, if any.
+fn prepare(fixture: &Path, task: &Task) -> Result<tempfile::TempDir> {
     let dir = tempfile::tempdir()?;
     copy_dir(fixture, dir.path())?;
-    fs::create_dir_all(dir.path().join("logs"))?;
-    fs::write(dir.path().join("logs/app.log"), log)?;
+    for bug in task.bugs {
+        let path = dir.path().join(bug.file);
+        let source = fs::read_to_string(&path)?;
+        if source.matches(bug.from).count() != 1 {
+            bail!(
+                "task `{}`: bug pattern not found exactly once in {}",
+                task.name,
+                bug.file
+            );
+        }
+        fs::write(&path, source.replace(bug.from, bug.to))?;
+    }
+    if let Some(log) = &task.log {
+        fs::create_dir_all(dir.path().join("logs"))?;
+        fs::write(dir.path().join("logs/app.log"), log)?;
+    }
     Ok(dir)
 }
 
@@ -372,40 +396,6 @@ fn check_tool(exe: &str, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-/// A realistic ~35 KB application log with one ERROR buried in the middle.
-fn app_log() -> String {
-    let mut log = String::new();
-    let paths = [
-        "/api/products",
-        "/api/cart",
-        "/api/users/me",
-        "/healthz",
-        "/api/orders",
-    ];
-    for i in 0..400u32 {
-        let (min, sec) = (i / 60, i % 60);
-        let path = paths[(i as usize * 7) % paths.len()];
-        let _ = writeln!(
-            log,
-            "2026-10-30T14:{min:02}:{sec:02}.{:03}Z INFO  request_id=req-{:06x} method=GET path={path} status=200 duration_ms={}",
-            (i * 37) % 1000,
-            i * 2_654_435 % 0xff_ffff,
-            5 + (i * 13) % 120
-        );
-        if i == 217 {
-            let _ = writeln!(
-                log,
-                "2026-10-30T14:03:37.412Z ERROR request_id=req-5f3a2c method=POST path=/api/checkout status=500\n\
-                 Traceback (most recent call last):\n  \
-                 File \"app/handlers/checkout.py\", line 41, in post\n    total = order_total(cart.lines, discount_percent=coupon.percent)\n  \
-                 File \"shop/pricing.py\", line 25, in order_total\n    raise ValueError(\"total cannot be negative\")\n\
-                 ValueError: total cannot be negative"
-            );
-        }
-    }
-    log
-}
-
 fn median(mut values: Vec<f64>) -> f64 {
     values.sort_by(|a, b| a.total_cmp(b));
     match values.len() {
@@ -418,7 +408,7 @@ fn median(mut values: Vec<f64>) -> f64 {
 fn summarize(args: &Args, tasks: &[Task], variants: &[&str], runs: &[Run]) -> String {
     let mut out = String::new();
     let _ = writeln!(out, "\n# pacenote end-to-end benchmark\n");
-    let rewrite_note = if args.rewrite {
+    let rewrite_note = if variants.contains(&"rewrite-llm") {
         format!(
             " · rewrites by `{}`",
             args.rewrite_model
@@ -460,7 +450,7 @@ fn summarize(args: &Args, tasks: &[Task], variants: &[&str], runs: &[Run]) -> St
             totals[i].2 += ok;
             totals[i].3 += rs.len();
             let lint_cell = match *variant {
-                "rewritten" => "(rewrite of vague)".to_string(),
+                v if v.starts_with("rewrite") => "(rewrite of vague)".to_string(),
                 v => {
                     let prompt = if v == "specific" {
                         &task.specific
@@ -494,27 +484,45 @@ fn summarize(args: &Args, tasks: &[Task], variants: &[&str], runs: &[Run]) -> St
         }
     }
 
-    let _ = writeln!(out, "\n**All runs:**\n");
-    for (variant, (tokens, cost, ok, n)) in variants.iter().zip(&totals) {
-        let vs_vague = if *variant == "vague" {
-            String::new()
-        } else {
-            format!(
-                " ({} tokens, {} cost vs vague)",
-                delta(totals[0].0, *tokens),
-                delta(totals[0].1, *cost)
-            )
-        };
-        let _ = writeln!(
-            out,
-            "- {variant}: {ok}/{n} succeeded, ${cost:.3} total, {:.0}k tokens{vs_vague}",
-            tokens / 1e3
-        );
+    for split in ["dev", "held-out"] {
+        let in_split: Vec<&Run> = runs.iter().filter(|r| r.split == split).collect();
+        if in_split.is_empty() {
+            continue;
+        }
+        let _ = writeln!(out, "\n**All {split} runs:**\n");
+        let totals: Vec<(f64, f64, usize, usize)> = variants
+            .iter()
+            .map(|v| {
+                let rs: Vec<&&Run> = in_split.iter().filter(|r| r.variant == *v).collect();
+                (
+                    rs.iter().map(|r| r.total_tokens() as f64).sum(),
+                    rs.iter().map(|r| r.cost_usd).sum(),
+                    rs.iter().filter(|r| r.success).count(),
+                    rs.len(),
+                )
+            })
+            .collect();
+        for (variant, (tokens, cost, ok, n)) in variants.iter().zip(&totals) {
+            let vs_vague = if *variant == "vague" {
+                String::new()
+            } else {
+                format!(
+                    " ({} tokens, {} cost vs vague)",
+                    delta(totals[0].0, *tokens),
+                    delta(totals[0].1, *cost)
+                )
+            };
+            let _ = writeln!(
+                out,
+                "- {variant}: {ok}/{n} succeeded, ${cost:.3} total, {:.0}k tokens{vs_vague}",
+                tokens / 1e3
+            );
+        }
     }
     let _ = writeln!(
         out,
         "\nTokens = input + cache writes + cache reads + output, as reported by `claude -p --output-format json`; \
-         the rewritten variant also includes the rewrite call. Cache reads are billed at a fraction of input price, \
+         rewrite variants also include the rewrite call. Cache reads are billed at a fraction of input price, \
          so cost is the better single number."
     );
     out
