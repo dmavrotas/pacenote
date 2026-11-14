@@ -327,6 +327,14 @@ fn main() -> Result<()> {
                         &payload,
                         min,
                         |prompt, cwd| Ok(options.rewrite(prompt, cwd)?.text),
+                        |prompt, cwd| {
+                            pacenote::ground::likely_target(prompt, cwd).map(|file| {
+                                pacenote::lint::detect_language(prompt)
+                                    .messages
+                                    .likely_location
+                                    .replace("{file}", &file)
+                            })
+                        },
                         &std::env::temp_dir(),
                         now,
                     )

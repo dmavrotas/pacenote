@@ -19,7 +19,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use crate::lang::fold;
-use crate::lint::{content_words, detect_language};
+use crate::lint::{content_words, detect_language, is_task_request};
 
 /// A paragraph this big is treated as a paste.
 const PASTE_MIN_LINES: usize = 10;
@@ -27,6 +27,8 @@ const PASTE_MIN_BYTES: usize = 1_500;
 /// The top file must beat the runner-up by this factor to be named.
 const CONFIDENCE_RATIO: f64 = 1.5;
 const MAX_FILE_BYTES: u64 = 200_000;
+/// Total bytes read per lookup, so the hook stays fast in large repos.
+const MAX_TOTAL_BYTES: u64 = 8_000_000;
 const MAX_FILES: usize = 2_000;
 /// Directories never worth describing or scanning.
 const SKIP_DIRS: &[&str] = &[
@@ -163,7 +165,12 @@ fn has_path_anchor(text: &str) -> bool {
 // ---------------------------------------------------------------------------
 
 /// The source file that clearly matches the prompt's content words, if any.
+/// Prompts that already name a path get no hint.
+/// Only task requests get a target: replies and questions never do.
 pub fn likely_target(prompt: &str, dir: &Path) -> Option<String> {
+    if has_path_anchor(prompt) || !is_task_request(prompt) {
+        return None;
+    }
     let words: Vec<String> = content_words(prompt)
         .into_iter()
         .filter(|w| w.chars().count() >= 3 && !w.chars().all(|c| c.is_ascii_digit()))
@@ -171,22 +178,26 @@ pub fn likely_target(prompt: &str, dir: &Path) -> Option<String> {
     if words.is_empty() {
         return None;
     }
+    let mut budget = MAX_TOTAL_BYTES;
     let files: Vec<(String, String)> = project_files(dir)
         .into_iter()
-        .filter(|f| !is_test_file(f))
+        .filter(|f| is_source_file(f) && !is_test_file(f))
         .filter_map(|f| {
             let path = dir.join(&f);
             let size = path.metadata().ok()?.len();
-            (size <= MAX_FILE_BYTES)
-                .then(|| std::fs::read_to_string(&path).ok())
-                .flatten()
+            if size > MAX_FILE_BYTES || size > budget {
+                return None;
+            }
+            budget -= size;
+            std::fs::read_to_string(&path)
+                .ok()
                 .map(|content| (f, fold(&content)))
         })
         .collect();
     let ranked = rank(&words, &files);
     match ranked.as_slice() {
-        [(file, top), rest @ ..] if *top > 0.0 => {
-            let second = rest.first().map_or(0.0, |(_, s)| *s);
+        [(file, top, true), rest @ ..] if *top > 0.0 => {
+            let second = rest.first().map_or(0.0, |(_, s, _)| *s);
             (*top >= second * CONFIDENCE_RATIO).then(|| file.clone())
         }
         _ => None,
@@ -195,7 +206,10 @@ pub fn likely_target(prompt: &str, dir: &Path) -> Option<String> {
 
 /// Score files by IDF-weighted word matches. Path matches beat content
 /// matches; adjacent words that appear as one identifier score highest.
-fn rank(words: &[String], files: &[(String, String)]) -> Vec<(String, f64)> {
+/// Each file's score, and whether it has *strong* evidence: its path matches
+/// a content word, or the prompt's adjacent words appear in it as one
+/// identifier. Content-only matches ("yes" inside a test string) are weak.
+fn rank(words: &[String], files: &[(String, String)]) -> Vec<(String, f64, bool)> {
     let stems: Vec<String> = words.iter().map(|w| stem(w)).collect();
     let n = files.len() as f64;
     let df = |needle: &str| {
@@ -220,15 +234,17 @@ fn rank(words: &[String], files: &[(String, String)]) -> Vec<(String, f64)> {
         })
         .collect();
 
-    let mut scores: Vec<(String, f64)> = files
+    let mut scores: Vec<(String, f64, bool)> = files
         .iter()
         .map(|(path, content)| {
             let path_folded = fold(path);
             let mut score = 0.0;
+            let mut strong = false;
             for s in &stems {
                 let weight = idf[s.as_str()];
                 if path_folded.contains(s.as_str()) {
                     score += 3.0 * weight;
+                    strong |= weight > 0.0;
                 }
                 let hits = content.matches(s.as_str()).count();
                 if hits > 0 {
@@ -238,9 +254,10 @@ fn rank(words: &[String], files: &[(String, String)]) -> Vec<(String, f64)> {
             for (forms, weight) in &bigrams {
                 if forms.iter().any(|f| content.contains(f.as_str())) {
                     score += 4.0 * weight;
+                    strong |= *weight > 0.0;
                 }
             }
-            (path.clone(), score)
+            (path.clone(), score, strong)
         })
         .collect();
     scores.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
@@ -260,6 +277,19 @@ fn stem(word: &str) -> String {
         }
     }
     word.to_string()
+}
+
+/// Extensions of files that can be a code-change target. Docs, configs and
+/// lockfiles are never named as the likely location.
+const SOURCE_EXTENSIONS: &[&str] = &[
+    "rs", "py", "go", "java", "kt", "kts", "scala", "ts", "tsx", "js", "jsx", "mjs", "cjs", "vue",
+    "svelte", "cs", "fs", "c", "cc", "cpp", "cxx", "h", "hpp", "m", "mm", "swift", "rb", "php",
+    "ex", "exs", "erl", "clj", "dart", "lua", "sql", "tf", "sh", "zig",
+];
+
+fn is_source_file(path: &str) -> bool {
+    path.rsplit_once('.')
+        .is_some_and(|(_, ext)| SOURCE_EXTENSIONS.contains(&ext.to_ascii_lowercase().as_str()))
 }
 
 fn is_test_file(path: &str) -> bool {
@@ -368,7 +398,7 @@ mod tests {
             Some("shop/pagination.py")
         );
         assert_eq!(
-            likely_target("the top products widget is wrong", dir.path()).as_deref(),
+            likely_target("the top products widget is wrong, fix it", dir.path()).as_deref(),
             Some("shop/report.py")
         );
     }
@@ -389,6 +419,40 @@ mod tests {
         assert!(is_test_file("src/cart.test.ts"));
         assert!(is_test_file("pkg/cart_test.go"));
         assert!(!is_test_file("shop/latest.py"));
+    }
+
+    #[test]
+    fn replies_and_weak_matches_get_no_target() {
+        let dir = repo(&[
+            (
+                "src/lint.rs",
+                "// examples: yes, go ahead, looks good\nfn lint() {}",
+            ),
+            ("src/main.rs", "fn main() {}"),
+        ]);
+        assert_eq!(
+            likely_target("yes go ahead", dir.path()),
+            None,
+            "not a task"
+        );
+        assert_eq!(
+            likely_target("fix the ahead looks thing", dir.path()),
+            None,
+            "content-only matches are weak evidence"
+        );
+    }
+
+    #[test]
+    fn only_source_files_are_targets() {
+        let dir = repo(&[
+            ("README.md", "roster import roster import roster import"),
+            ("src/main.kt", "fun main() {}"),
+        ]);
+        assert_eq!(
+            likely_target("the roster import is broken", dir.path()),
+            None
+        );
+        assert!(is_source_file("app/Roster.kt") && !is_source_file("Cargo.lock"));
     }
 
     #[test]

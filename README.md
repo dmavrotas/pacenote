@@ -116,7 +116,11 @@ fix it
 
 Most of the local saving comes from paste trimming: −54% cost on a pasted crash log. The file hint helped on 2 of 3 held-out tasks where it applied and was neutral on the third. `--mode llm` uses your own Claude access (`ANTHROPIC_API_KEY`, else your Claude Code login), so a subscription works without an API key. It hasn't beaten local mode yet, so it stays experimental. Details: [bench/results](bench/results/e2e-grounding-holdout.md).
 
-To have the hook do it, run `pacenote hook install --rewrite`. When a prompt is flagged, the hook **holds** it and shows the suggested rewrite, in the prompt's language. Paste the rewrite (edit it if needed), or resubmit your original unchanged to send it as-is. The hook only holds a prompt when it has a rewrite to offer; if the rewrite fails or times out, you just get the usual warning.
+To have the hook do it, run `pacenote hook install --rewrite`. Then:
+
+- **Pasted logs are held.** A prompt flagged for a large paste is held, and the trimmed version is shown, in the prompt's language. Paste it (edit it if needed), or resubmit your original unchanged to send it as-is.
+- **File hints are silent.** When one source file clearly matches a task request, the prompt goes through as typed, and Claude gets one line, `Likely location: <file>` (~10 tokens, only when confident). You see a short `pacenote [hint]` note.
+- **Otherwise nothing happens.** Replies and questions never get hints. With hints on, the hook adds ~2–3 ms to a reply and ~10–30 ms to a task prompt in a typical repo.
 
 | Option | Default | |
 |---|---|---|

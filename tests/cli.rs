@@ -242,7 +242,7 @@ fn hook_local_rewrite_trims_a_pasted_log() {
         "2026-10-30T14:01:00Z ERROR checkout failed\nValueError: total cannot be negative\n",
     );
     let payload = json!({"prompt": format!("checkout fails, logs:\n\n{log}\n\nfix it"),
-                         "session_id": "cli-test-local", "cwd": dir.path()})
+                         "session_id": unique_session(), "cwd": dir.path()})
     .to_string();
     let mut child = pacenote()
         .args(["hook", "prompt", "--rewrite"])
@@ -267,4 +267,13 @@ fn hook_local_rewrite_trims_a_pasted_log() {
         reason.len() < 2_000,
         "the suggestion is the excerpt, not the log"
     );
+}
+
+/// Hold state lives in the system temp dir, so each run needs its own session.
+fn unique_session() -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    format!("cli-test-{}-{nanos}", std::process::id())
 }

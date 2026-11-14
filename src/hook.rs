@@ -42,12 +42,19 @@ pub fn user_prompt_submit(payload: &str, min_severity: Severity) -> Option<Strin
     warning(&findings)
 }
 
-/// Rewrite-enabled variant. `rewrite(prompt, cwd)` produces the suggestion;
-/// `state_dir` remembers held prompts; `now` is the current Unix time.
+/// Rewrite-enabled variant.
+///
+/// - `rewrite(prompt, cwd)` produces the suggestion for a held prompt (one
+///   with a warn-level finding); an unchanged result means "nothing to add".
+/// - `hint(prompt, cwd)` may return a one-line note for Claude (the likely
+///   file). It is attached as `additionalContext` to prompts that go through,
+///   so it costs a few tokens only when it is confident.
+/// - `state_dir` remembers held prompts; `now` is the current Unix time.
 pub fn user_prompt_submit_with_rewrite(
     payload: &str,
     min_severity: Severity,
     rewrite: impl FnOnce(&str, &Path) -> Result<String>,
+    hint: impl FnOnce(&str, &Path) -> Option<String>,
     state_dir: &Path,
     now: u64,
 ) -> Option<String> {
@@ -58,35 +65,48 @@ pub fn user_prompt_submit_with_rewrite(
         .filter(|f| f.severity == Severity::Warn)
         .map(|f| f.code)
         .collect();
-    if held_codes.is_empty() {
-        return warning(&findings);
-    }
+    let cwd = input.cwd.clone().unwrap_or_else(|| PathBuf::from("."));
+    let mut notes = Vec::new();
 
-    let hold = HoldState::new(state_dir, &input.session_id);
-    if hold.take_if_resubmitted(&input.prompt, now) {
-        return None; // the user chose to send it as-is
-    }
-
-    let cwd = input.cwd.unwrap_or_else(|| PathBuf::from("."));
-    match rewrite(&input.prompt, &cwd) {
-        Ok(text) if text.trim() != input.prompt.trim() => {
-            hold.remember(&input.prompt, now);
-            let messages = &detect_language(&input.prompt).messages;
-            let reason = format!(
-                "{}\n\n{}\n\n{}",
-                messages.held.replace("{codes}", &held_codes.join(", ")),
-                text.trim(),
-                messages.hold_hint
-            );
-            Some(json!({ "decision": "block", "reason": reason }).to_string())
+    if !held_codes.is_empty() {
+        let hold = HoldState::new(state_dir, &input.session_id);
+        if hold.take_if_resubmitted(&input.prompt, now) {
+            return None; // the user chose to send it as-is
         }
-        Ok(_) => warning(&findings),
-        Err(e) => {
-            let mut message = format_findings(&findings);
-            message.push_str(&format!("\n(pacenote rewrite unavailable: {e:#})"));
-            Some(json!({ "systemMessage": message }).to_string())
+        match rewrite(&input.prompt, &cwd) {
+            Ok(text) if text.trim() != input.prompt.trim() => {
+                hold.remember(&input.prompt, now);
+                let messages = &detect_language(&input.prompt).messages;
+                let reason = format!(
+                    "{}\n\n{}\n\n{}",
+                    messages.held.replace("{codes}", &held_codes.join(", ")),
+                    text.trim(),
+                    messages.hold_hint
+                );
+                return Some(json!({ "decision": "block", "reason": reason }).to_string());
+            }
+            Ok(_) => {}
+            Err(e) => notes.push(format!("(pacenote rewrite unavailable: {e:#})")),
         }
     }
+
+    let mut out = serde_json::Map::new();
+    let mut message: Vec<String> = Vec::new();
+    if !findings.is_empty() {
+        message.push(format_findings(&findings));
+    }
+    message.extend(notes);
+    if let Some(hint) = hint(&input.prompt, &cwd) {
+        message.push(format!("pacenote [hint] {hint}"));
+        out.insert(
+            "hookSpecificOutput".into(),
+            json!({ "hookEventName": "UserPromptSubmit", "additionalContext": hint }),
+        );
+    }
+    if !message.is_empty() {
+        out.insert("systemMessage".into(), json!(message.join("\n")));
+    }
+    (!out.is_empty()).then(|| serde_json::Value::Object(out).to_string())
 }
 
 fn findings(prompt: &str, min_severity: Severity) -> Vec<Finding> {
@@ -179,8 +199,15 @@ mod tests {
 
     fn held(payload: &str, dir: &Path, now: u64, rewrite: &str) -> Option<Value> {
         let rewrite = rewrite.to_string();
-        user_prompt_submit_with_rewrite(payload, Severity::Warn, |_, _| Ok(rewrite), dir, now)
-            .map(|out| serde_json::from_str(&out).unwrap())
+        user_prompt_submit_with_rewrite(
+            payload,
+            Severity::Warn,
+            |_, _| Ok(rewrite),
+            |_, _| None,
+            dir,
+            now,
+        )
+        .map(|out| serde_json::from_str(&out).unwrap())
     }
 
     #[test]
@@ -226,6 +253,7 @@ mod tests {
             payload,
             Severity::Warn,
             |_, _| anyhow::bail!("offline"),
+            |_, _| None,
             dir.path(),
             0,
         )
@@ -250,6 +278,43 @@ mod tests {
             r#"{"prompt":"fix the panic in src/stats.rs","session_id":"s"}"#,
             Severity::Warn,
             |_, _| panic!("rewriter must not be called"),
+            |_, _| None,
+            dir.path(),
+            0,
+        );
+        assert_eq!(out, None);
+    }
+
+    #[test]
+    fn confident_hint_goes_to_claude_as_context_without_holding() {
+        let dir = tempfile::tempdir().unwrap();
+        let out = user_prompt_submit_with_rewrite(
+            r#"{"prompt":"pagination is broken, can you fix it","session_id":"s"}"#,
+            Severity::Warn,
+            |_, _| panic!("not flagged: no rewrite, no hold"),
+            |_, _| Some("Likely location: `shop/pagination.py`.".into()),
+            dir.path(),
+            0,
+        )
+        .unwrap();
+        let v: Value = serde_json::from_str(&out).unwrap();
+        assert!(v.get("decision").is_none(), "never blocks for a hint");
+        assert_eq!(
+            v["hookSpecificOutput"]["additionalContext"],
+            "Likely location: `shop/pagination.py`."
+        );
+        assert_eq!(v["hookSpecificOutput"]["hookEventName"], "UserPromptSubmit");
+        assert!(v["systemMessage"].as_str().unwrap().contains("[hint]"));
+    }
+
+    #[test]
+    fn no_hint_and_no_findings_means_no_output() {
+        let dir = tempfile::tempdir().unwrap();
+        let out = user_prompt_submit_with_rewrite(
+            r#"{"prompt":"yes","session_id":"s"}"#,
+            Severity::Warn,
+            |_, _| panic!("unused"),
+            |_, _| None,
             dir.path(),
             0,
         );

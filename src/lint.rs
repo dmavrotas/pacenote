@@ -102,6 +102,22 @@ pub fn content_words(prompt: &str) -> Vec<String> {
         .collect()
 }
 
+/// Is this a request to change something (a task verb or a symptom), as
+/// opposed to a reply or a question?
+pub fn is_task_request(prompt: &str) -> bool {
+    let trimmed = prompt.trim();
+    let words = words(trimmed);
+    let packs = lang::detect(&words, trimmed);
+    let phrase = format!(" {} ", words.join(" "));
+    let mentions = |list: fn(&Lang) -> &'static [&'static str]| {
+        packs
+            .iter()
+            .any(|l| lang::mentions(list(l), &words, &phrase))
+    };
+    (mentions(|l| l.task_verbs) || mentions(|l| l.task_phrases))
+        && !is_question(trimmed, &words, &packs)
+}
+
 /// The main language of a prompt (for localized messages).
 pub fn detect_language(prompt: &str) -> &'static Lang {
     let trimmed = prompt.trim();
