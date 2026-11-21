@@ -105,6 +105,71 @@ pub fn uninstall(settings: &mut Value) -> usize {
     removed
 }
 
+const CURSOR_EVENT: &str = "beforeSubmitPrompt";
+
+/// Register `command` as a Cursor `beforeSubmitPrompt` hook in `hooks.json`
+/// (`{"version": 1, "hooks": {"beforeSubmitPrompt": [{"command": ...}]}}`),
+/// or update an existing pacenote entry in place.
+pub fn install_cursor(config: &mut Value, command: &str) -> Result<Change> {
+    let root = config
+        .as_object_mut()
+        .context("hooks.json must contain a JSON object")?;
+    root.entry("version").or_insert_with(|| json!(1));
+    let hooks = root
+        .entry("hooks")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .context("`hooks` in hooks.json must be an object")?;
+    let entries = hooks
+        .entry(CURSOR_EVENT)
+        .or_insert_with(|| json!([]))
+        .as_array_mut()
+        .with_context(|| format!("`hooks.{CURSOR_EVENT}` in hooks.json must be an array"))?;
+
+    let existing = entries.iter_mut().find(|h| {
+        h.get("command")
+            .and_then(Value::as_str)
+            .is_some_and(is_pacenote_hook)
+    });
+    Ok(match existing {
+        Some(hook) if hook["command"] == command => Change::Unchanged,
+        Some(hook) => {
+            hook["command"] = json!(command);
+            Change::Updated
+        }
+        None => {
+            entries.push(json!({ "command": command }));
+            Change::Added
+        }
+    })
+}
+
+/// Remove pacenote's Cursor hook entries (and the containers that become
+/// empty). Returns the number removed.
+pub fn uninstall_cursor(config: &mut Value) -> usize {
+    let pointer = format!("/hooks/{CURSOR_EVENT}");
+    let Some(entries) = config.pointer_mut(&pointer).and_then(Value::as_array_mut) else {
+        return 0;
+    };
+    let before = entries.len();
+    entries.retain(|h| {
+        !h.get("command")
+            .and_then(Value::as_str)
+            .is_some_and(is_pacenote_hook)
+    });
+    let removed = before - entries.len();
+
+    if removed > 0 && entries.is_empty() {
+        if let Some(hooks) = config.get_mut("hooks").and_then(Value::as_object_mut) {
+            hooks.remove(CURSOR_EVENT);
+            if hooks.is_empty() {
+                config.as_object_mut().map(|root| root.remove("hooks"));
+            }
+        }
+    }
+    removed
+}
+
 /// Load a settings file; a missing or empty file is an empty object.
 pub fn load(path: &Path) -> Result<Value> {
     match fs::read_to_string(path) {
@@ -325,5 +390,66 @@ mod tests {
 
         fs::write(&path, "{ broken").unwrap();
         assert!(load(&path).unwrap_err().to_string().contains("refusing"));
+    }
+
+    const CURSOR_CMD: &str = "/usr/local/bin/pacenote hook prompt --agent cursor";
+
+    #[test]
+    fn cursor_install_keeps_other_hooks_and_version() {
+        let mut cfg = json!({"version": 1, "hooks": {
+            "beforeShellExecution": [{"command": "./guard.sh"}],
+            "beforeSubmitPrompt": [{"command": "./audit.sh"}]}});
+        assert_eq!(install_cursor(&mut cfg, CURSOR_CMD).unwrap(), Change::Added);
+        assert_eq!(
+            install_cursor(&mut cfg, CURSOR_CMD).unwrap(),
+            Change::Unchanged
+        );
+        assert_eq!(
+            install_cursor(&mut cfg, "/opt/pacenote hook prompt --agent cursor").unwrap(),
+            Change::Updated
+        );
+        assert_eq!(
+            cfg["hooks"]["beforeSubmitPrompt"].as_array().unwrap().len(),
+            2
+        );
+        assert_eq!(
+            cfg["hooks"]["beforeShellExecution"][0]["command"],
+            "./guard.sh"
+        );
+        assert_eq!(cfg["version"], 1);
+    }
+
+    #[test]
+    fn cursor_install_creates_file_shape_and_uninstall_round_trips() {
+        let mut cfg = json!({});
+        install_cursor(&mut cfg, CURSOR_CMD).unwrap();
+        assert_eq!(
+            cfg,
+            json!({"version": 1, "hooks": {"beforeSubmitPrompt": [{"command": CURSOR_CMD}]}})
+        );
+        assert_eq!(uninstall_cursor(&mut cfg), 1);
+        assert_eq!(cfg, json!({"version": 1}));
+        assert_eq!(uninstall_cursor(&mut cfg), 0);
+
+        let mut shared = json!({"hooks": {"beforeSubmitPrompt": [{"command": "./a.sh"}]}});
+        install_cursor(&mut shared, CURSOR_CMD).unwrap();
+        assert_eq!(uninstall_cursor(&mut shared), 1);
+        assert_eq!(
+            shared["hooks"]["beforeSubmitPrompt"],
+            json!([{"command": "./a.sh"}])
+        );
+    }
+
+    #[test]
+    fn cursor_install_rejects_unexpected_shapes() {
+        assert!(install_cursor(&mut json!([]), CURSOR_CMD).is_err());
+        assert!(install_cursor(&mut json!({"hooks": []}), CURSOR_CMD).is_err());
+        assert!(
+            install_cursor(
+                &mut json!({"hooks": {"beforeSubmitPrompt": {}}}),
+                CURSOR_CMD
+            )
+            .is_err()
+        );
     }
 }

@@ -383,3 +383,172 @@ fn unique_session() -> String {
         .as_nanos();
     format!("cli-test-{}-{nanos}", std::process::id())
 }
+
+fn run_with_stdin(
+    args: &[&str],
+    envs: &[(&str, &std::path::Path)],
+    stdin: &str,
+) -> std::process::Output {
+    let mut cmd = pacenote();
+    cmd.args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    for (k, v) in envs {
+        cmd.env(k, v);
+    }
+    let mut child = cmd.spawn().unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(stdin.as_bytes())
+        .unwrap();
+    child.wait_with_output().unwrap()
+}
+
+#[test]
+fn codex_hook_install_and_uninstall_round_trip() {
+    let home = tempfile::tempdir().unwrap();
+    let env = [("CODEX_HOME", home.path())];
+    let cmd = |action: &str| {
+        pacenote()
+            .args(["hook", action, "--agent", "codex"])
+            .env("CODEX_HOME", home.path())
+            .output()
+            .unwrap()
+    };
+    let out = cmd("install");
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8_lossy(&out.stdout).contains("/hooks"));
+    let config: Value =
+        serde_json::from_str(&fs::read_to_string(home.path().join("hooks.json")).unwrap()).unwrap();
+    let command = config["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
+        .as_str()
+        .unwrap();
+    assert!(command.ends_with("hook prompt"), "{command}");
+    // The registered hook speaks Claude Code's protocol, which Codex shares.
+    let out = run_with_stdin(&["hook", "prompt"], &env, r#"{"prompt":"fix it"}"#);
+    assert!(String::from_utf8_lossy(&out.stdout).contains("systemMessage"));
+
+    assert!(cmd("uninstall").status.success());
+    let config: Value =
+        serde_json::from_str(&fs::read_to_string(home.path().join("hooks.json")).unwrap()).unwrap();
+    assert_eq!(config, json!({}));
+}
+
+#[test]
+fn cursor_hook_install_and_hold_flow() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("hooks.json");
+    fs::write(
+        &file,
+        r#"{"version":1,"hooks":{"stop":[{"command":"./done.sh"}]}}"#,
+    )
+    .unwrap();
+    let out = pacenote()
+        .args(["hook", "install", "--agent", "cursor", "--settings"])
+        .arg(&file)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let config: Value = serde_json::from_str(&fs::read_to_string(&file).unwrap()).unwrap();
+    let command = config["hooks"]["beforeSubmitPrompt"][0]["command"]
+        .as_str()
+        .unwrap();
+    assert!(command.contains("hook prompt --agent cursor"), "{command}");
+    assert_eq!(config["hooks"]["stop"][0]["command"], "./done.sh");
+
+    let session = format!("it-{}", std::process::id());
+    let payload =
+        json!({"prompt": "fix it", "conversation_id": session, "workspace_roots": [dir.path()]});
+    let run = || {
+        run_with_stdin(
+            &["hook", "prompt", "--agent", "cursor"],
+            &[],
+            &payload.to_string(),
+        )
+    };
+
+    // A vague prompt with nothing to add (local rewrite) is allowed...
+    let out: Value = serde_json::from_slice(&run().stdout).unwrap();
+    assert_eq!(out, json!({"continue": true}));
+    // ...and a pasted log is held with the trimmed version, then released.
+    let log = format!(
+        "start\nERROR boom\nTraceback (most recent call last):\n{}",
+        "noise line\n".repeat(3000)
+    );
+    let payload = json!({"prompt": format!("fix it, logs: {log}"), "conversation_id": session, "workspace_roots": [dir.path()]});
+    let held: Value = serde_json::from_slice(
+        &run_with_stdin(
+            &["hook", "prompt", "--agent", "cursor"],
+            &[],
+            &payload.to_string(),
+        )
+        .stdout,
+    )
+    .unwrap();
+    assert_eq!(held["continue"], false, "{held}");
+    assert!(
+        held["user_message"]
+            .as_str()
+            .unwrap()
+            .contains("ERROR boom")
+    );
+    let again: Value = serde_json::from_slice(
+        &run_with_stdin(
+            &["hook", "prompt", "--agent", "cursor"],
+            &[],
+            &payload.to_string(),
+        )
+        .stdout,
+    )
+    .unwrap();
+    assert_eq!(again, json!({"continue": true}));
+
+    assert!(
+        pacenote()
+            .args(["hook", "uninstall", "--agent", "cursor", "--settings"])
+            .arg(&file)
+            .output()
+            .unwrap()
+            .status
+            .success()
+    );
+    let config: Value = serde_json::from_str(&fs::read_to_string(&file).unwrap()).unwrap();
+    assert_eq!(
+        config,
+        json!({"version": 1, "hooks": {"stop": [{"command": "./done.sh"}]}})
+    );
+}
+
+#[test]
+fn scope_local_is_claude_only_and_bad_cursor_input_is_allowed() {
+    let out = pacenote()
+        .args([
+            "hook",
+            "install",
+            "--agent",
+            "codex",
+            "--scope",
+            "local",
+            "--dry-run",
+        ])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("only exists for Claude Code"));
+    let out = run_with_stdin(&["hook", "prompt", "--agent", "cursor"], &[], "garbage");
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout).trim(),
+        r#"{"continue":true}"#
+    );
+}

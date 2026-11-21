@@ -77,6 +77,10 @@ enum Command {
 enum HookEvent {
     /// UserPromptSubmit: warn about vague or oversized prompts (adds no tokens)
     Prompt {
+        /// Which agent is calling. Codex speaks Claude Code's protocol;
+        /// Cursor can only allow or hold, so it always holds flagged prompts
+        #[arg(long, value_enum, default_value_t = Agent::Claude)]
+        agent: Agent,
         /// Include informational findings
         #[arg(long)]
         strict: bool,
@@ -246,6 +250,9 @@ impl RewriteArgs {
 
 #[derive(clap::Args)]
 struct SettingsTarget {
+    /// Which agent's hook configuration to edit
+    #[arg(long, value_enum, default_value_t = Agent::Claude)]
+    agent: Agent,
     /// Which settings file to edit
     #[arg(long, value_enum, default_value_t = Scope::User)]
     scope: Scope,
@@ -259,11 +266,12 @@ struct SettingsTarget {
 
 #[derive(Clone, Copy, ValueEnum)]
 enum Scope {
-    /// ~/.claude/settings.json (all projects)
+    /// ~/.claude/settings.json, ~/.codex/hooks.json or ~/.cursor/hooks.json (all projects)
     User,
-    /// .claude/settings.json in the current directory (shared with the team)
+    /// .claude/settings.json, .codex/hooks.json or .cursor/hooks.json in the
+    /// current directory (shared with the team)
     Project,
-    /// .claude/settings.local.json in the current directory (just you)
+    /// .claude/settings.local.json in the current directory (just you; Claude Code only)
     Local,
 }
 
@@ -272,10 +280,18 @@ impl SettingsTarget {
         if let Some(path) = &self.settings {
             return Ok(path.clone());
         }
+        let (project_file, user_file) = match self.agent {
+            Agent::Claude => (".claude/settings.json", "settings.json"),
+            Agent::Codex => (".codex/hooks.json", "hooks.json"),
+            Agent::Cursor => (".cursor/hooks.json", "hooks.json"),
+        };
         Ok(match self.scope {
-            Scope::User => install::claude_config_dir()?.join("settings.json"),
-            Scope::Project => PathBuf::from(".claude/settings.json"),
-            Scope::Local => PathBuf::from(".claude/settings.local.json"),
+            Scope::User => self.agent.config_dir()?.join(user_file),
+            Scope::Project => PathBuf::from(project_file),
+            Scope::Local if self.agent == Agent::Claude => {
+                PathBuf::from(".claude/settings.local.json")
+            }
+            Scope::Local => anyhow::bail!("--scope local only exists for Claude Code"),
         })
     }
 }
@@ -347,6 +363,7 @@ fn main() -> Result<()> {
         Command::Hook {
             event:
                 HookEvent::Prompt {
+                    agent,
                     strict,
                     rewrite,
                     options,
@@ -363,10 +380,17 @@ fn main() -> Result<()> {
                 } else {
                     Severity::Warn
                 };
-                let out = if rewrite {
-                    let now = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map_or(0, |d| d.as_secs());
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| d.as_secs());
+                let out = if agent == Agent::Cursor {
+                    Some(hook::cursor_before_submit(
+                        &payload,
+                        |prompt, cwd| Ok(options.rewrite(prompt, cwd)?.text),
+                        &std::env::temp_dir(),
+                        now,
+                    ))
+                } else if rewrite {
                     hook::user_prompt_submit_with_rewrite(
                         &payload,
                         min,
@@ -388,6 +412,8 @@ fn main() -> Result<()> {
                 if let Some(out) = out {
                     println!("{out}");
                 }
+            } else if agent == Agent::Cursor {
+                println!(r#"{{"continue":true}}"#);
             }
         }
         Command::Hook {
@@ -406,19 +432,29 @@ fn main() -> Result<()> {
                     let exe = std::env::current_exe().context("locating the pacenote binary")?;
                     warn_if_build_dir(&exe);
                     let mut args = Vec::new();
-                    if strict {
-                        args.push("--strict".to_string());
-                    }
-                    if rewrite {
-                        args.push("--rewrite".to_string());
+                    if target.agent == Agent::Cursor {
+                        // Cursor can only hold or allow, so rewriting is implied.
+                        args.extend(["--agent".to_string(), "cursor".to_string()]);
                         args.extend(options.hook_args());
+                    } else {
+                        if strict {
+                            args.push("--strict".to_string());
+                        }
+                        if rewrite {
+                            args.push("--rewrite".to_string());
+                            args.extend(options.hook_args());
+                        }
                     }
                     install::hook_command(&exe, &args)
                 }
             };
             let path = target.path()?;
             let mut settings = install::load(&path)?;
-            let change = install::install(&mut settings, &command)?;
+            let change = if target.agent == Agent::Cursor {
+                install::install_cursor(&mut settings, &command)?
+            } else {
+                install::install(&mut settings, &command)?
+            };
             let verb = match change {
                 Change::Added => "Added",
                 Change::Updated => "Updated",
@@ -433,13 +469,23 @@ fn main() -> Result<()> {
                 target.dry_run,
                 &format!("{verb} `{command}`"),
             )?;
+            if target.agent == Agent::Codex && !target.dry_run {
+                println!(
+                    "Codex only runs hooks you have trusted: open /hooks in Codex and approve it."
+                );
+            }
         }
         Command::Hook {
             event: HookEvent::Uninstall { target },
         } => {
             let path = target.path()?;
             let mut settings = install::load(&path)?;
-            match install::uninstall(&mut settings) {
+            let removed = if target.agent == Agent::Cursor {
+                install::uninstall_cursor(&mut settings)
+            } else {
+                install::uninstall(&mut settings)
+            };
+            match removed {
                 0 => println!("No pacenote hook found in {}", path.display()),
                 n => commit(
                     &path,
