@@ -7,11 +7,16 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+use crate::agent::Agent;
+use crate::transcript::codex::CodexParser;
 use crate::transcript::{Event, Usage, parse_line};
 
 /// Rough bytes-per-token ratio for English text and code. Good enough to rank
 /// tools; use the API's token-counting endpoint when exact numbers matter.
 pub const BYTES_PER_TOKEN: u64 = 4;
+
+const CLAUDE: &str = "claude";
+const CODEX: &str = "codex";
 
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct Totals {
@@ -57,6 +62,7 @@ pub struct Stats {
     pub totals: Totals,
     pub by_model: BTreeMap<String, Totals>,
     pub by_project: BTreeMap<String, Totals>,
+    pub by_agent: BTreeMap<String, Totals>,
     pub tools: BTreeMap<String, ToolTotals>,
     pub files_scanned: u64,
     pub malformed_lines: u64,
@@ -83,11 +89,15 @@ impl Stats {
             .is_none_or(|since| timestamp >= since)
     }
 
+    /// Ingest one Claude Code transcript line.
     pub fn ingest_line(&mut self, project: &str, line: &str) {
-        let Some(events) = parse_line(line) else {
-            self.malformed_lines += 1;
-            return;
-        };
+        match parse_line(line) {
+            Some(events) => self.apply(CLAUDE, project, events),
+            None => self.malformed_lines += 1,
+        }
+    }
+
+    fn apply(&mut self, agent: &str, project: &str, events: Vec<Event>) {
         for event in events {
             match event {
                 Event::ApiCall {
@@ -100,6 +110,10 @@ impl Stats {
                         continue;
                     }
                     self.totals.record(&usage);
+                    self.by_agent
+                        .entry(agent.to_string())
+                        .or_default()
+                        .record(&usage);
                     self.by_model.entry(model).or_default().record(&usage);
                     self.by_project
                         .entry(project.to_string())
@@ -131,21 +145,34 @@ impl Stats {
         }
     }
 
-    /// Ingest a whole transcript. Invalid UTF-8 is replaced rather than fatal.
-    pub fn ingest_reader(&mut self, project: &str, mut reader: impl BufRead) -> io::Result<()> {
+    /// Ingest a whole Claude Code transcript. Invalid UTF-8 is replaced rather than fatal.
+    pub fn ingest_reader(&mut self, project: &str, reader: impl BufRead) -> io::Result<()> {
         self.files_scanned += 1;
-        let mut buf = Vec::new();
-        loop {
-            buf.clear();
-            if reader.read_until(b'\n', &mut buf)? == 0 {
-                return Ok(());
+        for_each_line(reader, |line| self.ingest_line(project, line))
+    }
+
+    /// Ingest a whole Codex rollout. `session` is the rollout's file name; the
+    /// project comes from the session's working directory.
+    pub fn ingest_codex_reader(&mut self, session: &str, reader: impl BufRead) -> io::Result<()> {
+        self.files_scanned += 1;
+        let mut parser = CodexParser::new(session);
+        for_each_line(reader, |line| match parser.parse_line(line) {
+            Some(events) if events.is_empty() => {}
+            Some(events) => {
+                let project = parser.project().unwrap_or("(unknown)");
+                if self.project_matches(project) {
+                    self.apply(CODEX, project, events);
+                }
             }
-            let line = String::from_utf8_lossy(&buf);
-            let line = line.trim();
-            if !line.is_empty() {
-                self.ingest_line(project, line);
-            }
-        }
+            None => self.malformed_lines += 1,
+        })
+    }
+
+    fn project_matches(&self, project: &str) -> bool {
+        self.filter
+            .project
+            .as_deref()
+            .is_none_or(|needle| project.to_lowercase().contains(&needle.to_lowercase()))
     }
 
     /// Tools sorted by estimated tokens, largest first.
@@ -159,9 +186,33 @@ impl Stats {
 /// Scan every `*.jsonl` under `root/<project>/` (recursively, so subagent
 /// transcripts are included).
 pub fn scan(root: &Path, filter: Filter) -> io::Result<Stats> {
-    let mut stats = Stats::new(filter.clone());
-    let needle = filter.project.as_deref().map(str::to_lowercase);
+    scan_agents(&[(Agent::Claude, root.to_path_buf())], filter)
+}
 
+/// Scan the transcript roots of several agents into one [`Stats`].
+///
+/// Claude Code roots hold one directory per project; Codex roots hold
+/// `YYYY/MM/DD/rollout-*.jsonl` files whose project comes from their content.
+/// Cursor keeps no readable token data, so it is rejected.
+pub fn scan_agents(roots: &[(Agent, PathBuf)], filter: Filter) -> io::Result<Stats> {
+    let mut stats = Stats::new(filter);
+    for (agent, root) in roots {
+        match agent {
+            Agent::Claude => scan_claude(&mut stats, root)?,
+            Agent::Codex => scan_codex(&mut stats, root)?,
+            Agent::Cursor => {
+                return Err(io::Error::new(
+                    io::ErrorKind::Unsupported,
+                    "Cursor keeps no readable token data locally, so stats are not supported yet",
+                ));
+            }
+        }
+    }
+    Ok(stats)
+}
+
+fn scan_claude(stats: &mut Stats, root: &Path) -> io::Result<()> {
+    let needle = stats.filter.project.as_deref().map(str::to_lowercase);
     let mut projects: Vec<_> = fs::read_dir(root)?
         .filter_map(Result::ok)
         .filter(|e| e.path().is_dir())
@@ -182,7 +233,36 @@ pub fn scan(root: &Path, filter: Filter) -> io::Result<Stats> {
             stats.ingest_reader(&name, BufReader::new(File::open(&file)?))?;
         }
     }
-    Ok(stats)
+    Ok(())
+}
+
+fn scan_codex(stats: &mut Stats, root: &Path) -> io::Result<()> {
+    let mut files = Vec::new();
+    collect_jsonl(root, &mut files)?;
+    files.sort();
+    for file in files {
+        let session = file
+            .file_stem()
+            .map_or_else(String::new, |s| s.to_string_lossy().into_owned());
+        stats.ingest_codex_reader(&session, BufReader::new(File::open(&file)?))?;
+    }
+    Ok(())
+}
+
+/// Feed each non-blank line to `f`. Invalid UTF-8 is replaced rather than fatal.
+fn for_each_line(mut reader: impl BufRead, mut f: impl FnMut(&str)) -> io::Result<()> {
+    let mut buf = Vec::new();
+    loop {
+        buf.clear();
+        if reader.read_until(b'\n', &mut buf)? == 0 {
+            return Ok(());
+        }
+        let line = String::from_utf8_lossy(&buf);
+        let line = line.trim();
+        if !line.is_empty() {
+            f(line);
+        }
+    }
 }
 
 fn collect_jsonl(dir: &Path, out: &mut Vec<PathBuf>) -> io::Result<()> {

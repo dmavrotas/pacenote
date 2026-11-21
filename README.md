@@ -37,6 +37,8 @@ cargo install --git https://github.com/dmavrotas/pacenote
 pacenote stats                       # all projects
 pacenote stats -p myrepo --since 2026-10-01
 pacenote stats --json | jq .tools    # machine-readable
+pacenote stats --agent codex         # OpenAI Codex CLI rollouts
+pacenote stats --agent all           # Claude Code + Codex, with a BY AGENT table
 pacenote lint "fix the bug"
 ```
 
@@ -131,6 +133,14 @@ To have the hook do it, run `pacenote hook install --rewrite`. Then:
 | `--timeout` | 25 s | |
 
 **Privacy:** local mode sends nothing anywhere. `--mode llm` is the only pacenote feature that sends data: it sends the prompt (and, unless `--no-context`, the file list) to Anthropic under your own account, and only when you choose it.
+
+## Agents
+
+| | Claude Code | OpenAI Codex | Cursor |
+|---|---|---|---|
+| `stats` | yes | yes (`~/.codex/sessions`, honours `$CODEX_HOME`) | not yet: Cursor keeps no readable token data locally |
+
+Codex support follows the rollout layout described in public issue reports; OpenAI doesn't document it, and it hasn't been verified against every Codex version. Codex's `input_tokens` includes cached tokens, so pacenote reports them as uncached input plus cache reads (Codex has no cache-write charge).
 
 ## Languages
 

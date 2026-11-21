@@ -7,6 +7,7 @@
 //! - [`ground`]: free local rewriting (trim pastes, name the likely file)
 //! - [`rewrite`]: opt-in LLM rewriting with the user's own Claude access
 
+pub mod agent;
 pub mod ground;
 pub mod hook;
 pub mod install;

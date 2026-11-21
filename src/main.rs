@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 
+use pacenote::agent::Agent;
 use pacenote::hook;
 use pacenote::install::{self, Change};
 use pacenote::lint::{Severity, lint};
@@ -26,7 +27,11 @@ struct Cli {
 enum Command {
     /// Summarize token usage from Claude Code transcripts
     Stats {
-        /// Transcript root (default: $CLAUDE_CONFIG_DIR/projects or ~/.claude/projects)
+        /// Which agent's transcripts to read
+        #[arg(long, value_enum, default_value_t = StatsAgent::Claude)]
+        agent: StatsAgent,
+        /// Transcript root (default: ~/.claude/projects, ~/.codex/sessions;
+        /// honours $CLAUDE_CONFIG_DIR and $CODEX_HOME). Needs a single --agent.
         #[arg(long)]
         root: Option<PathBuf>,
         /// Only include projects whose directory name contains this text
@@ -122,6 +127,27 @@ struct RewriteArgs {
     /// Give up on a rewrite after this many seconds
     #[arg(long, default_value_t = 25)]
     timeout: u64,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum StatsAgent {
+    Claude,
+    Codex,
+    /// Not supported yet: Cursor keeps no readable token data locally
+    Cursor,
+    /// Claude Code and Codex together
+    All,
+}
+
+impl StatsAgent {
+    fn agents(self) -> Vec<Agent> {
+        match self {
+            StatsAgent::Claude => vec![Agent::Claude],
+            StatsAgent::Codex => vec![Agent::Codex],
+            StatsAgent::Cursor => vec![Agent::Cursor],
+            StatsAgent::All => vec![Agent::Claude, Agent::Codex],
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -257,15 +283,33 @@ impl SettingsTarget {
 fn main() -> Result<()> {
     match Cli::parse().command {
         Command::Stats {
+            agent,
             root,
             project,
             since,
             top,
             json,
         } => {
-            let root = root.map_or_else(default_root, Ok)?;
-            let stats = stats::scan(&root, Filter { since, project })
-                .with_context(|| format!("reading transcripts under {}", root.display()))?;
+            let agents = agent.agents();
+            anyhow::ensure!(
+                root.is_none() || agents.len() == 1,
+                "--root needs a single --agent, not `all`"
+            );
+            let roots = agents
+                .into_iter()
+                .map(|agent| {
+                    let root = match &root {
+                        Some(root) => root.clone(),
+                        None => agent.transcript_root()?,
+                    };
+                    Ok((agent, root))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let stats =
+                stats::scan_agents(&roots, Filter { since, project }).with_context(|| {
+                    let dirs: Vec<_> = roots.iter().map(|(_, r)| r.display().to_string()).collect();
+                    format!("reading transcripts under {}", dirs.join(", "))
+                })?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&stats)?);
             } else {
@@ -407,10 +451,6 @@ fn main() -> Result<()> {
         }
     }
     Ok(())
-}
-
-fn default_root() -> Result<PathBuf> {
-    Ok(install::claude_config_dir()?.join("projects"))
 }
 
 /// Write (or, for a dry run, print) the edited settings and report what happened.
