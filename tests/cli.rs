@@ -7,7 +7,13 @@ use std::process::{Command, Stdio};
 use serde_json::{Value, json};
 
 fn pacenote() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_pacenote"))
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_pacenote"));
+    // Never touch the real ~/.local/state from tests.
+    cmd.env(
+        "PACENOTE_STATE_DIR",
+        std::env::temp_dir().join(format!("pacenote-test-state-{}", std::process::id())),
+    );
+    cmd
 }
 
 fn write_jsonl(path: &std::path::Path, lines: &[Value]) {

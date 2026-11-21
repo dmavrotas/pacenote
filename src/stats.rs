@@ -218,7 +218,7 @@ fn scan_claude(stats: &mut Stats, root: &Path) -> io::Result<()> {
         .filter_map(Result::ok)
         .filter(|e| e.path().is_dir())
         .collect();
-    projects.sort_by_key(|e| e.file_name());
+    projects.sort_by_key(fs::DirEntry::file_name);
 
     for project in projects {
         let name = project.file_name().to_string_lossy().into_owned();
@@ -268,8 +268,10 @@ fn for_each_line(mut reader: impl BufRead, mut f: impl FnMut(&str)) -> io::Resul
 
 fn collect_jsonl(dir: &Path, out: &mut Vec<PathBuf>) -> io::Result<()> {
     for entry in fs::read_dir(dir)? {
-        let path = entry?.path();
-        if path.is_dir() {
+        let entry = entry?;
+        let path = entry.path();
+        // `file_type` doesn't follow symlinks, so a symlink cycle can't recurse forever.
+        if entry.file_type()?.is_dir() {
             collect_jsonl(&path, out)?;
         } else if path.extension().is_some_and(|ext| ext == "jsonl") {
             out.push(path);
@@ -354,5 +356,18 @@ mod tests {
         stats.ingest_reader("p", &data[..]).unwrap();
         assert_eq!(stats.totals.api_calls, 2);
         assert_eq!(stats.malformed_lines, 1);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn scan_survives_symlink_cycles() {
+        let root = tempfile::tempdir().unwrap();
+        let project = root.path().join("p");
+        fs::create_dir_all(&project).unwrap();
+        fs::write(project.join("s.jsonl"), api_line("r", "t", 1) + "\n").unwrap();
+        std::os::unix::fs::symlink(&project, project.join("loop")).unwrap();
+        let stats = scan(root.path(), Filter::default()).unwrap();
+        assert_eq!(stats.totals.api_calls, 1);
+        assert_eq!(stats.files_scanned, 1);
     }
 }

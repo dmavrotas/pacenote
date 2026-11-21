@@ -1,4 +1,4 @@
-use std::io::{self, IsTerminal, Read};
+use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -229,14 +229,12 @@ impl RewriteArgs {
         if let Some(model) = &self.model {
             args.extend(["--model".to_string(), model.clone()]);
         }
-        if self.backend != BackendChoice::Auto {
-            let name = self
-                .backend
-                .to_possible_value()
-                .expect("value")
-                .get_name()
-                .to_string();
-            args.extend(["--backend".to_string(), name]);
+        if let Some(name) = self
+            .backend
+            .to_possible_value()
+            .filter(|_| self.backend != BackendChoice::Auto)
+        {
+            args.extend(["--backend".to_string(), name.get_name().to_string()]);
         }
         if self.no_context {
             args.push("--no-context".to_string());
@@ -383,14 +381,19 @@ fn main() -> Result<()> {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .map_or(0, |d| d.as_secs());
+                // Holding needs somewhere private to remember held prompts.
+                let state = hook::state_dir();
                 let out = if agent == Agent::Cursor {
-                    Some(hook::cursor_before_submit(
-                        &payload,
-                        |prompt, cwd| Ok(options.rewrite(prompt, cwd)?.text),
-                        &std::env::temp_dir(),
-                        now,
-                    ))
-                } else if rewrite {
+                    Some(match &state {
+                        Some(state) => hook::cursor_before_submit(
+                            &payload,
+                            |prompt, cwd| Ok(options.rewrite(prompt, cwd)?.text),
+                            state,
+                            now,
+                        ),
+                        None => r#"{"continue":true}"#.to_string(),
+                    })
+                } else if let (true, Some(state)) = (rewrite, &state) {
                     hook::user_prompt_submit_with_rewrite(
                         &payload,
                         min,
@@ -403,17 +406,18 @@ fn main() -> Result<()> {
                                     .replace("{file}", &file)
                             })
                         },
-                        &std::env::temp_dir(),
+                        state,
                         now,
                     )
                 } else {
                     hook::user_prompt_submit(&payload, min)
                 };
+                // A closed stdout must not turn into a panic inside a hook.
                 if let Some(out) = out {
-                    println!("{out}");
+                    let _ = writeln!(io::stdout(), "{out}");
                 }
             } else if agent == Agent::Cursor {
-                println!(r#"{{"continue":true}}"#);
+                let _ = writeln!(io::stdout(), r#"{{"continue":true}}"#);
             }
         }
         Command::Hook {
