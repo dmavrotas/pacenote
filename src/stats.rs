@@ -195,17 +195,18 @@ pub fn scan(root: &Path, filter: Filter) -> io::Result<Stats> {
 /// `YYYY/MM/DD/rollout-*.jsonl` files whose project comes from their content.
 /// Cursor keeps no readable token data, so it is rejected.
 pub fn scan_agents(roots: &[(Agent, PathBuf)], filter: Filter) -> io::Result<Stats> {
+    if roots.iter().any(|(agent, _)| *agent == Agent::Cursor) {
+        return Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "Cursor keeps no readable token data locally, so stats are not supported yet",
+        ));
+    }
     let mut stats = Stats::new(filter);
     for (agent, root) in roots {
         match agent {
             Agent::Claude => scan_claude(&mut stats, root)?,
             Agent::Codex => scan_codex(&mut stats, root)?,
-            Agent::Cursor => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Unsupported,
-                    "Cursor keeps no readable token data locally, so stats are not supported yet",
-                ));
-            }
+            Agent::Cursor => unreachable!("rejected above"),
         }
     }
     Ok(stats)

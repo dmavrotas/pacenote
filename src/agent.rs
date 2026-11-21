@@ -20,11 +20,11 @@ impl Agent {
     /// when set, else `~/.claude`, `~/.codex`, `~/.cursor`.
     pub fn config_dir(self) -> Result<PathBuf> {
         let (var, dir) = match self {
-            Agent::Claude => ("CLAUDE_CONFIG_DIR", ".claude"),
-            Agent::Codex => ("CODEX_HOME", ".codex"),
-            Agent::Cursor => ("", ".cursor"),
+            Agent::Claude => (Some("CLAUDE_CONFIG_DIR"), ".claude"),
+            Agent::Codex => (Some("CODEX_HOME"), ".codex"),
+            Agent::Cursor => (None, ".cursor"),
         };
-        if let Some(path) = std::env::var_os(var).filter(|_| !var.is_empty()) {
+        if let Some(path) = var.and_then(std::env::var_os) {
             return Ok(PathBuf::from(path));
         }
         let home = std::env::var_os("HOME")

@@ -68,26 +68,20 @@ pub fn user_prompt_submit_with_rewrite(
     let cwd = input.cwd.clone().unwrap_or_else(|| PathBuf::from("."));
     let mut notes = Vec::new();
 
-    if !held_codes.is_empty() {
-        let hold = HoldState::new(state_dir, &input.session_id);
-        if hold.take_if_resubmitted(&input.prompt, now) {
-            return None; // the user chose to send it as-is
+    match try_hold(
+        &input.prompt,
+        &input.session_id,
+        &cwd,
+        &held_codes,
+        rewrite,
+        state_dir,
+        now,
+    ) {
+        Hold::Held(reason) => {
+            return Some(json!({ "decision": "block", "reason": reason }).to_string());
         }
-        match rewrite(&input.prompt, &cwd) {
-            Ok(text) if text.trim() != input.prompt.trim() => {
-                hold.remember(&input.prompt, now);
-                let messages = &detect_language(&input.prompt).messages;
-                let reason = format!(
-                    "{}\n\n{}\n\n{}",
-                    messages.held.replace("{codes}", &held_codes.join(", ")),
-                    text.trim(),
-                    messages.hold_hint
-                );
-                return Some(json!({ "decision": "block", "reason": reason }).to_string());
-            }
-            Ok(_) => {}
-            Err(e) => notes.push(format!("(pacenote rewrite unavailable: {e:#})")),
-        }
+        Hold::Resubmitted => return None, // the user chose to send it as-is
+        Hold::Pass(note) => notes.extend(note),
     }
 
     let mut out = serde_json::Map::new();
@@ -107,6 +101,97 @@ pub fn user_prompt_submit_with_rewrite(
         out.insert("systemMessage".into(), json!(message.join("\n")));
     }
     (!out.is_empty()).then(|| serde_json::Value::Object(out).to_string())
+}
+
+/// What to do with a prompt that has warn-level findings.
+enum Hold {
+    /// Block it and show this text (the rewrite) instead.
+    Held(String),
+    /// The user resubmitted a held prompt unchanged: let it through silently.
+    Resubmitted,
+    /// Let it through, optionally with a note about why no rewrite was offered.
+    Pass(Option<String>),
+}
+
+/// Hold a prompt with warn-level findings (`held_codes`) when `rewrite` has a
+/// better version to offer, remembering it so an unchanged resubmission goes
+/// through.
+fn try_hold(
+    prompt: &str,
+    session_id: &str,
+    cwd: &Path,
+    held_codes: &[&str],
+    rewrite: impl FnOnce(&str, &Path) -> Result<String>,
+    state_dir: &Path,
+    now: u64,
+) -> Hold {
+    if held_codes.is_empty() {
+        return Hold::Pass(None);
+    }
+    let hold = HoldState::new(state_dir, session_id);
+    if hold.take_if_resubmitted(prompt, now) {
+        return Hold::Resubmitted;
+    }
+    match rewrite(prompt, cwd) {
+        Ok(text) if text.trim() != prompt.trim() => {
+            hold.remember(prompt, now);
+            let messages = &detect_language(prompt).messages;
+            Hold::Held(format!(
+                "{}\n\n{}\n\n{}",
+                messages.held.replace("{codes}", &held_codes.join(", ")),
+                text.trim(),
+                messages.hold_hint
+            ))
+        }
+        Ok(_) => Hold::Pass(None),
+        Err(e) => Hold::Pass(Some(format!("(pacenote rewrite unavailable: {e:#})"))),
+    }
+}
+
+#[derive(Deserialize)]
+struct CursorPrompt {
+    #[serde(default)]
+    prompt: String,
+    #[serde(default)]
+    conversation_id: String,
+    #[serde(default)]
+    workspace_roots: Vec<PathBuf>,
+}
+
+/// Handle Cursor's `beforeSubmitPrompt`. Cursor can only allow or block a
+/// prompt (no warnings, no added context), so this holds prompts with
+/// warn-level findings and shows the rewrite in `user_message`; everything
+/// else, including any malformed input, is allowed. Always returns the JSON
+/// to print.
+pub fn cursor_before_submit(
+    payload: &str,
+    rewrite: impl FnOnce(&str, &Path) -> Result<String>,
+    state_dir: &Path,
+    now: u64,
+) -> String {
+    const ALLOW: &str = r#"{"continue":true}"#;
+    let Ok(input) = serde_json::from_str::<CursorPrompt>(payload) else {
+        return ALLOW.into();
+    };
+    let findings = findings(&input.prompt, Severity::Warn);
+    let codes: Vec<&str> = findings.iter().map(|f| f.code).collect();
+    let cwd = input
+        .workspace_roots
+        .first()
+        .cloned()
+        .unwrap_or_else(|| PathBuf::from("."));
+    match try_hold(
+        &input.prompt,
+        &input.conversation_id,
+        &cwd,
+        &codes,
+        rewrite,
+        state_dir,
+        now,
+    ) {
+        Hold::Held(reason) => json!({ "continue": false, "user_message": reason }).to_string(),
+        Hold::Resubmitted | Hold::Pass(_) => ALLOW.into(),
+    }
 }
 
 fn findings(prompt: &str, min_severity: Severity) -> Vec<Finding> {
@@ -339,5 +424,41 @@ mod tests {
         let p = r#"{"prompt":"refactor the payment module into smaller pieces"}"#;
         assert_eq!(user_prompt_submit(p, Severity::Warn), None);
         assert!(user_prompt_submit(p, Severity::Info).is_some());
+    }
+
+    fn cursor(payload: &str, dir: &Path, now: u64, rewrite: &str) -> Value {
+        let out = cursor_before_submit(payload, |_, _| Ok(rewrite.to_string()), dir, now);
+        serde_json::from_str(&out).unwrap()
+    }
+
+    #[test]
+    fn cursor_holds_vague_prompt_then_allows_unchanged_resubmit() {
+        let dir = tempfile::tempdir().unwrap();
+        let payload = r#"{"prompt":"fix it","conversation_id":"c1","workspace_roots":["/repo"]}"#;
+        let first = cursor(payload, dir.path(), 1_000, "Fix the crash in src/cart.rs");
+        assert_eq!(first["continue"], false);
+        let message = first["user_message"].as_str().unwrap();
+        assert!(message.contains("vague-target"));
+        assert!(message.contains("Fix the crash in src/cart.rs"));
+        assert_eq!(
+            cursor(payload, dir.path(), 1_100, "again")["continue"],
+            true
+        );
+    }
+
+    #[test]
+    fn cursor_allows_good_prompts_bad_payloads_and_failed_rewrites() {
+        let dir = tempfile::tempdir().unwrap();
+        let good = r#"{"prompt":"fix the panic in src/stats.rs so `cargo test` passes"}"#;
+        assert_eq!(cursor(good, dir.path(), 0, "x"), json!({"continue": true}));
+        assert_eq!(
+            cursor("not json", dir.path(), 0, "x"),
+            json!({"continue": true})
+        );
+        let vague = r#"{"prompt":"fix it","conversation_id":"c2"}"#;
+        let out = cursor_before_submit(vague, |_, _| anyhow::bail!("boom"), dir.path(), 0);
+        assert_eq!(out, r#"{"continue":true}"#);
+        // an unchanged rewrite means there is nothing to add
+        assert_eq!(cursor(vague, dir.path(), 0, "fix it")["continue"], true);
     }
 }
