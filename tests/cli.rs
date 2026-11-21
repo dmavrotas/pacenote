@@ -86,6 +86,112 @@ fn stats_text_report_renders() {
     assert!(text.contains("claude-opus-5-5"));
 }
 
+fn codex_rollout(path: &std::path::Path) {
+    let line = |ts: &str, kind: &str, payload: Value| json!({"timestamp": ts, "type": kind, "payload": payload});
+    let count = |ts: &str, total: u64| {
+        line(
+            ts,
+            "event_msg",
+            json!({"type": "token_count", "info": {
+                "total_token_usage": {"total_tokens": total},
+                "last_token_usage": {"input_tokens": 1000, "cached_input_tokens": 800,
+                                     "output_tokens": 50}}}),
+        )
+    };
+    write_jsonl(
+        path,
+        &[
+            line(
+                "2026-11-01T10:00:00Z",
+                "session_meta",
+                json!({"cwd": "/work/demo"}),
+            ),
+            line(
+                "2026-11-01T10:00:00Z",
+                "turn_context",
+                json!({"model": "gpt-5-codex"}),
+            ),
+            line(
+                "2026-11-01T10:01:00Z",
+                "response_item",
+                json!({"type": "function_call", "name": "shell", "call_id": "c1",
+                       "arguments": "{\"command\":[\"bash\",\"-lc\",\"cargo test\"]}"}),
+            ),
+            line(
+                "2026-11-01T10:01:01Z",
+                "response_item",
+                json!({"type": "function_call_output", "call_id": "c1", "output": "x".repeat(8000)}),
+            ),
+            count("2026-11-01T10:01:02Z", 1050),
+            count("2026-11-01T10:01:02Z", 1050),
+        ],
+    );
+}
+
+#[test]
+fn stats_codex_json_over_fixture_tree() {
+    let root = tempfile::tempdir().unwrap();
+    codex_rollout(
+        &root
+            .path()
+            .join("2026/11/01/rollout-2026-11-01T10-00-00-abc.jsonl"),
+    );
+    let out = pacenote()
+        .args(["stats", "--agent", "codex", "--json", "--root"])
+        .arg(root.path())
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["totals"]["api_calls"], 1);
+    assert_eq!(v["totals"]["input_tokens"], 200);
+    assert_eq!(v["totals"]["cache_read_input_tokens"], 800);
+    assert_eq!(v["by_model"]["gpt-5-codex"]["api_calls"], 1);
+    assert_eq!(v["by_project"]["demo"]["api_calls"], 1);
+    assert_eq!(v["by_agent"]["codex"]["api_calls"], 1);
+    assert_eq!(v["tools"]["shell: cargo test"]["bytes"], 8000);
+}
+
+#[test]
+fn stats_all_combines_agents_and_cursor_is_rejected() {
+    let home = tempfile::tempdir().unwrap();
+    write_jsonl(
+        &home.path().join("claude/projects/-p/s.jsonl"),
+        &[assistant("r", 5, json!([]))],
+    );
+    codex_rollout(
+        &home
+            .path()
+            .join("codex/sessions/2026/11/01/rollout-a.jsonl"),
+    );
+    let run = |agent: &str| {
+        pacenote()
+            .args(["stats", "--json", "--agent", agent])
+            .env("CLAUDE_CONFIG_DIR", home.path().join("claude"))
+            .env("CODEX_HOME", home.path().join("codex"))
+            .output()
+            .unwrap()
+    };
+    let out = run("all");
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["totals"]["api_calls"], 2);
+    assert_eq!(v["by_agent"]["claude"]["api_calls"], 1);
+    assert_eq!(v["by_agent"]["codex"]["api_calls"], 1);
+
+    let out = run("cursor");
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("Cursor"));
+}
+
 #[test]
 fn stats_missing_root_fails_with_context() {
     let out = pacenote()

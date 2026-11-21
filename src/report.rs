@@ -61,6 +61,15 @@ pub fn render(stats: &Stats, home: Option<&str>, top: usize) -> String {
         u.cache_hit_rate() * 100.0
     );
 
+    if stats.by_agent.len() > 1 {
+        let _ = writeln!(out, "BY AGENT");
+        usage_table(
+            &mut out,
+            stats.by_agent.iter().map(|(k, v)| (k.clone(), v)),
+            usize::MAX,
+        );
+    }
+
     let _ = writeln!(out, "BY MODEL");
     usage_table(
         &mut out,
