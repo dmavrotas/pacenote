@@ -12,7 +12,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub mod codex;
+pub(crate) mod codex;
 
 /// Token counts reported by the API for one request.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]

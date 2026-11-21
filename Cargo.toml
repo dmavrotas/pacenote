@@ -2,7 +2,7 @@
 name = "pacenote"
 version = "0.1.0"
 edition = "2024"
-description = "A co-driver for Claude Code: token-usage analytics and prompt linting"
+description = "A co-driver for Claude Code, Codex and Cursor: token-usage analytics and prompt linting"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 keywords = ["claude", "llm", "tokens", "cli", "prompt"]

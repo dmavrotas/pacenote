@@ -214,6 +214,17 @@ fn epoch_secs(timestamp: &str) -> Option<i64> {
     let hour = t.next()?.parse::<i64>().ok()?;
     let minute = t.next()?.parse::<i64>().ok()?;
     let second = t.next()?.split('.').next()?.parse::<i64>().ok()?;
+    // Reject out-of-range fields: the input is untrusted, and wild values
+    // would overflow the arithmetic below.
+    if !(1970..=9999).contains(&year)
+        || !(1..=12).contains(&month)
+        || !(1..=31).contains(&day)
+        || !(0..24).contains(&hour)
+        || !(0..60).contains(&minute)
+        || !(0..=60).contains(&second)
+    {
+        return None;
+    }
 
     // Days since 1970-01-01 (Howard Hinnant's days_from_civil).
     let y = if month <= 2 { year - 1 } else { year };
@@ -417,5 +428,14 @@ mod tests {
         assert_eq!(epoch_secs("1970-01-01T00:00:00Z"), Some(0));
         assert_eq!(epoch_secs("2026-11-01T10:00:30.250Z"), Some(1_793_527_230));
         assert_eq!(epoch_secs("garbage"), None);
+        for hostile in [
+            "9999999999999999-01-01T00:00:00Z",
+            "2026-13-01T00:00:00Z",
+            "2026-11-01T99:00:00Z",
+            "-5-01-01T00:00:00Z",
+            "2026-11-01T10:00Z",
+        ] {
+            assert_eq!(epoch_secs(hostile), None, "{hostile}");
+        }
     }
 }
