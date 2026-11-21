@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::ValueEnum;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -33,12 +33,14 @@ impl Agent {
         Ok(PathBuf::from(home).join(dir))
     }
 
-    /// Where transcripts live by default.
+    /// Where transcripts live by default. Cursor has none pacenote can read.
     pub fn transcript_root(self) -> Result<PathBuf> {
         let sub = match self {
             Agent::Claude => "projects",
             Agent::Codex => "sessions",
-            Agent::Cursor => "projects",
+            Agent::Cursor => {
+                bail!("Cursor keeps no readable token data locally; stats are not supported yet")
+            }
         };
         Ok(self.config_dir()?.join(sub))
     }

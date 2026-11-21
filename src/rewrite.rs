@@ -10,9 +10,11 @@
 //! `git status`) so it can name real files; it is instructed never to invent
 //! any. Nothing is sent anywhere unless the user enables rewriting.
 
+use std::fmt::Write as _;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, anyhow, bail};
@@ -180,32 +182,37 @@ impl Rewriter {
             .stderr(Stdio::piped())
             .spawn()
             .with_context(|| format!("starting `{exe}`; is Claude Code installed?"))?;
-        child
-            .stdin
-            .take()
-            .expect("piped stdin")
-            .write_all(message.as_bytes())?;
-
+        let mut stdin = child.stdin.take().context("child stdin was not piped")?;
+        let stdout = child.stdout.take().context("child stdout was not piped")?;
+        let stderr = child.stderr.take().context("child stderr was not piped")?;
         let deadline = Instant::now() + self.timeout;
+
+        // Feed stdin and drain both output pipes concurrently: a full pipe in
+        // either direction would otherwise stall the child until the timeout.
+        // The threads are detached on purpose: a grandchild that inherited a
+        // pipe could keep it open after we kill the child, and we must not wait for it.
+        let message = message.to_owned();
+        std::thread::spawn(move || {
+            // A child that exits early closes the pipe; that surfaces below.
+            let _ = stdin.write_all(message.as_bytes());
+        });
+        let stdout = drain(stdout);
+        let stderr = drain(stderr);
+
         while child.try_wait()?.is_none() {
             if Instant::now() > deadline {
                 let _ = child.kill();
+                let _ = child.wait();
                 bail!("`{exe} -p` timed out after {}s", self.timeout.as_secs());
             }
             std::thread::sleep(Duration::from_millis(50));
         }
-        let mut stdout = Vec::new();
-        child
-            .stdout
-            .take()
-            .expect("piped stdout")
-            .read_to_end(&mut stdout)?;
+        let grace = Duration::from_secs(1);
+        let stdout = stdout.recv_timeout(grace).unwrap_or_default();
+        let stderr = stderr.recv_timeout(grace).unwrap_or_default();
+
         let result: Value = serde_json::from_slice(&stdout).map_err(|_| {
-            let mut stderr = String::new();
-            let _ = child
-                .stderr
-                .take()
-                .map(|mut e| e.read_to_string(&mut stderr));
+            let stderr = String::from_utf8_lossy(&stderr);
             anyhow!(
                 "`{exe} -p` gave no JSON result: {}",
                 stderr.lines().next().unwrap_or("no output")
@@ -213,6 +220,17 @@ impl Rewriter {
         })?;
         parse_cli_response(&result)
     }
+}
+
+/// Read a pipe to the end on its own thread; the bytes arrive on the channel.
+fn drain(mut pipe: impl Read + Send + 'static) -> mpsc::Receiver<Vec<u8>> {
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        let mut buf = Vec::new();
+        let _ = pipe.read_to_end(&mut buf);
+        let _ = tx.send(buf);
+    });
+    rx
 }
 
 /// Models that accept `fallbacks: "default"`. Claude Haiku 5.5 has no
@@ -288,7 +306,7 @@ pub fn parse_api_response(body: &Value) -> Result<Rewrite> {
         .unwrap_or_default();
     let usage = &body["usage"];
     finish(
-        text,
+        &text,
         "api",
         usage["input_tokens"].as_u64().unwrap_or(0)
             + usage["cache_creation_input_tokens"].as_u64().unwrap_or(0)
@@ -308,7 +326,7 @@ pub fn parse_cli_response(result: &Value) -> Result<Rewrite> {
     }
     let usage = &result["usage"];
     finish(
-        result["result"].as_str().unwrap_or_default().to_string(),
+        result["result"].as_str().unwrap_or_default(),
         "claude",
         usage["input_tokens"].as_u64().unwrap_or(0)
             + usage["cache_creation_input_tokens"].as_u64().unwrap_or(0)
@@ -319,7 +337,7 @@ pub fn parse_cli_response(result: &Value) -> Result<Rewrite> {
 }
 
 fn finish(
-    text: String,
+    text: &str,
     backend: &'static str,
     input_tokens: u64,
     output_tokens: u64,
@@ -394,7 +412,7 @@ fn cap_lines(text: &str, max: usize) -> String {
         .collect::<Vec<_>>()
         .join("\n");
     if lines.len() > max {
-        out.push_str(&format!("\n… ({} more)", lines.len() - max));
+        let _ = write!(out, "\n… ({} more)", lines.len() - max);
     }
     out.push('\n');
     out
@@ -503,5 +521,61 @@ mod tests {
         );
         assert!(!context.contains("x.pyc"), "build dirs skipped: {context}");
         assert!(truncate_bytes(&"line\n".repeat(10_000), 100).len() < 130);
+    }
+
+    #[cfg(unix)]
+    fn fake_claude(dir: &Path, body: &str) -> String {
+        use std::os::unix::fs::PermissionsExt;
+        let path = dir.join("claude");
+        std::fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        path.to_string_lossy().into_owned()
+    }
+
+    #[cfg(unix)]
+    fn claude_rewriter(timeout: Duration) -> Rewriter {
+        Rewriter {
+            backend: Backend::Claude { exe: String::new() },
+            model: "m".into(),
+            timeout,
+        }
+    }
+
+    /// A child that floods stderr past the pipe buffer and reads a large stdin
+    /// must neither stall nor deadlock.
+    #[test]
+    #[cfg(unix)]
+    fn via_claude_survives_large_pipes_in_both_directions() {
+        let dir = tempfile::tempdir().unwrap();
+        let exe = fake_claude(
+            dir.path(),
+            "head -c 400000 /dev/zero >&2\n\
+             cat >/dev/null\n\
+             echo '{\"is_error\":false,\"result\":\"Fix src/a.rs\",\"usage\":{}}'",
+        );
+        let message = "x".repeat(1_000_000);
+        let started = Instant::now();
+        let rewrite = claude_rewriter(Duration::from_secs(20))
+            .via_claude(&exe, &message)
+            .unwrap();
+        assert_eq!(rewrite.text, "Fix src/a.rs");
+        assert!(started.elapsed() < Duration::from_secs(10));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn via_claude_times_out_and_reports_stderr_on_bad_output() {
+        let dir = tempfile::tempdir().unwrap();
+        let slow = fake_claude(dir.path(), "sleep 30");
+        let err = claude_rewriter(Duration::from_millis(300))
+            .via_claude(&slow, "hi")
+            .unwrap_err();
+        assert!(err.to_string().contains("timed out"), "{err:#}");
+
+        let bad = fake_claude(dir.path(), "cat >/dev/null; echo 'not logged in' >&2");
+        let err = claude_rewriter(Duration::from_secs(5))
+            .via_claude(&bad, "hi")
+            .unwrap_err();
+        assert!(err.to_string().contains("not logged in"), "{err:#}");
     }
 }

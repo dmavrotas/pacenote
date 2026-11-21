@@ -344,7 +344,8 @@ fn walk(root: &Path, dir: &Path, out: &mut Vec<String>) {
             continue;
         }
         let path = entry.path();
-        if path.is_dir() {
+        // Don't follow symlinks: a cycle would recurse until the OS gives up.
+        if entry.file_type().is_ok_and(|t| t.is_dir()) {
             if !SKIP_DIRS.contains(&name.as_str()) {
                 walk(root, &path, out);
             }

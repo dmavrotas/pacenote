@@ -92,17 +92,30 @@ pub fn uninstall(settings: &mut Value) -> usize {
         !(list.is_empty() && before > 0)
     });
 
-    if removed > 0 && groups.is_empty() {
-        let hooks = settings["hooks"].as_object_mut().expect("checked above");
-        hooks.remove(EVENT);
-        if hooks.is_empty() {
-            settings
-                .as_object_mut()
-                .expect("checked above")
-                .remove("hooks");
-        }
+    if removed > 0 {
+        prune(settings, EVENT);
     }
     removed
+}
+
+/// After removing pacenote's entries: drop `hooks.<event>` if we emptied it,
+/// and `hooks` if that leaves it empty.
+fn prune(config: &mut Value, event: &str) {
+    let Some(hooks) = config.get_mut("hooks").and_then(Value::as_object_mut) else {
+        return;
+    };
+    if hooks
+        .get(event)
+        .and_then(Value::as_array)
+        .is_some_and(Vec::is_empty)
+    {
+        hooks.remove(event);
+    }
+    if hooks.is_empty() {
+        if let Some(root) = config.as_object_mut() {
+            root.remove("hooks");
+        }
+    }
 }
 
 const CURSOR_EVENT: &str = "beforeSubmitPrompt";
@@ -159,13 +172,8 @@ pub fn uninstall_cursor(config: &mut Value) -> usize {
     });
     let removed = before - entries.len();
 
-    if removed > 0 && entries.is_empty() {
-        if let Some(hooks) = config.get_mut("hooks").and_then(Value::as_object_mut) {
-            hooks.remove(CURSOR_EVENT);
-            if hooks.is_empty() {
-                config.as_object_mut().map(|root| root.remove("hooks"));
-            }
-        }
+    if removed > 0 {
+        prune(config, CURSOR_EVENT);
     }
     removed
 }

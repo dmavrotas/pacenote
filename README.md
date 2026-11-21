@@ -148,7 +148,7 @@ pacenote hook install --agent cursor   # ~/.cursor/hooks.json (or --scope projec
 ```
 
 - **Codex** only runs hooks you've trusted, so open `/hooks` once after installing. Warnings, file hints and held prompts behave as in Claude Code.
-- **Cursor's hook can only allow or block a prompt**: it can't show a non-blocking warning or add context. So the Cursor hook *holds* prompts with a warn-level finding (a vague target, a large paste) and shows the local rewrite in the message; everything else passes silently. Resubmit the original unchanged to send it as-is.
+- **Cursor's hook can only allow or block a prompt**: it can't show a non-blocking warning or add context. So the Cursor hook *holds* prompts with a warn-level finding (a vague target, a large paste) and shows the local rewrite in the message; everything else passes silently. Resubmit the original unchanged to send it as-is. Held prompts are remembered in `$PACENOTE_STATE_DIR`, else `$XDG_STATE_HOME/pacenote`, else `~/.local/state/pacenote` (created private to you); if that directory can't be created, nothing is held.
 - `--scope local` is Claude Code only.
 
 Codex support follows the rollout layout described in public issue reports; OpenAI doesn't document it, and it hasn't been verified against every Codex version. Codex's `input_tokens` includes cached tokens, so pacenote reports them as uncached input plus cache reads (Codex has no cache-write charge).

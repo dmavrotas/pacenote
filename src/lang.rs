@@ -113,6 +113,8 @@ fn evidence(lang: &Lang, folded_words: &[String]) -> usize {
 /// English everywhere) plus every language with evidence in the prompt. The
 /// first entry is the prompt's main language, used for messages: Greek by
 /// script, otherwise the strongest non-English evidence that beats English.
+/// Language packs to try for a prompt, best first. Never empty: English is
+/// always included, so `detect(..)[0]` is the prompt's main language.
 pub fn detect(folded_words: &[String], raw: &str) -> Vec<&'static Lang> {
     let greek = raw
         .chars()

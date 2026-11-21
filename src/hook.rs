@@ -10,9 +10,7 @@
 //! when it has a rewrite to offer; on any rewrite failure it falls back to
 //! the plain warning.
 
-use std::collections::hash_map::DefaultHasher;
 use std::fs;
-use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
@@ -20,6 +18,27 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::lint::{Finding, Severity, detect_language, lint};
+
+/// Where held prompts are remembered: `$PACENOTE_STATE_DIR`, else
+/// `$XDG_STATE_HOME/pacenote`, else `~/.local/state/pacenote`. It is created
+/// private to the user (a shared temp directory would let another user plant
+/// a symlink there). `None` when no safe directory is available, in which
+/// case holding is skipped.
+pub fn state_dir() -> Option<PathBuf> {
+    let dir = std::env::var_os("PACENOTE_STATE_DIR")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("XDG_STATE_HOME").map(|d| PathBuf::from(d).join("pacenote")))
+        .or_else(|| {
+            let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))?;
+            Some(PathBuf::from(home).join(".local/state/pacenote"))
+        })?;
+    let mut builder = fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+    builder.create(&dir).ok()?;
+    Some(dir)
+}
 
 /// How long a held prompt can be resubmitted unchanged to send it as-is.
 pub const HOLD_WINDOW_SECS: u64 = 600;
@@ -246,10 +265,12 @@ impl HoldState {
     }
 }
 
+/// FNV-1a. Unlike `DefaultHasher`, its output is specified, so a hold
+/// recorded by one pacenote build is understood by the next.
 fn hash(value: &str) -> u64 {
-    let mut hasher = DefaultHasher::new();
-    value.hash(&mut hasher);
-    hasher.finish()
+    value.bytes().fold(0xcbf2_9ce4_8422_2325, |h, b| {
+        (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
+    })
 }
 
 #[cfg(test)]
