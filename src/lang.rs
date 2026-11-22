@@ -85,20 +85,85 @@ pub fn entry_matches(entry: &str, word: &str) -> bool {
     }
 }
 
+/// Words and stems shorter than this are matched exactly: one edit in a 3-4
+/// letter word reaches too many real words (`form`/`from`, `mode`/`code`).
+const FUZZY_MIN_LEN: usize = 5;
+
+/// Is `a` equal to `b`, or one substitution, insertion, deletion or adjacent
+/// transposition away from it?
+fn within_one_edit(a: &str, b: &str) -> bool {
+    // Most pairs differ in length by more than one: reject without allocating.
+    if a.chars().count().abs_diff(b.chars().count()) > 1 {
+        return false;
+    }
+    let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
+    let (short, long) = if a.len() <= b.len() {
+        (&a, &b)
+    } else {
+        (&b, &a)
+    };
+    match long.len() - short.len() {
+        0 => {
+            let diff: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
+            match diff.as_slice() {
+                [] | [_] => true,
+                [i, j] => j == &(i + 1) && a[*i] == b[*j] && a[*j] == b[*i],
+                _ => false,
+            }
+        }
+        1 => {
+            let skip = (0..long.len()).find(|&i| short.get(i) != Some(&long[i]));
+            skip.is_none_or(|i| short[i..] == long[i + 1..])
+        }
+        _ => false,
+    }
+}
+
+/// Like [`entry_matches`], but a long enough word may also carry one typo
+/// (a prefix entry tolerates one in its stem). Phrases and short entries stay
+/// exact.
+pub fn entry_matches_fuzzy(entry: &str, word: &str) -> bool {
+    if entry_matches(entry, word) {
+        return true;
+    }
+    let word_len = word.chars().count();
+    match entry.strip_suffix('*') {
+        Some(stem) => {
+            let n = stem.chars().count();
+            n >= FUZZY_MIN_LEN
+                && (n - 1..=n + 1).filter(|&k| k <= word_len).any(|k| {
+                    let head: String = word.chars().take(k).collect();
+                    within_one_edit(stem, &head)
+                })
+        }
+        None => {
+            entry.chars().count() >= FUZZY_MIN_LEN
+                && word_len >= FUZZY_MIN_LEN
+                && within_one_edit(entry, word)
+        }
+    }
+}
+
 /// Does any entry match one of `words` (or, for phrases, appear in `phrase`,
 /// which is the words joined by single spaces and padded with spaces)?
+/// Single words tolerate a typo, see [`entry_matches_fuzzy`].
 pub fn mentions(list: &[&str], words: &[String], phrase: &str) -> bool {
     list.iter().any(|entry| {
         if entry.contains(' ') {
             phrase.contains(&format!(" {entry} "))
         } else {
-            words.iter().any(|w| entry_matches(entry, w))
+            words.iter().any(|w| entry_matches_fuzzy(entry, w))
         }
     })
 }
 
 pub fn list_has(list: &[&str], word: &str) -> bool {
     list.iter().any(|entry| entry_matches(entry, word))
+}
+
+/// [`list_has`] with typo tolerance.
+pub fn list_has_fuzzy(list: &[&str], word: &str) -> bool {
+    list.iter().any(|entry| entry_matches_fuzzy(entry, word))
 }
 
 /// Evidence that a prompt is in `lang`: function words and task verbs.
@@ -530,5 +595,51 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn within_one_edit_covers_each_edit_kind() {
+        for (a, b) in [
+            ("refactor", "refactor"),
+            ("refactor", "refactr"),
+            ("refactor", "refacctor"),
+            ("refactor", "refector"),
+            ("update", "udpate"),
+        ] {
+            assert!(within_one_edit(a, b), "{a} ~ {b}");
+        }
+        for (a, b) in [
+            ("refactor", "refactors2"),
+            ("update", "udapte2"),
+            ("abcde", "badce"),
+            ("abcde", "abc"),
+        ] {
+            assert!(!within_one_edit(a, b), "{a} !~ {b}");
+        }
+    }
+
+    #[test]
+    fn fuzzy_matching_needs_five_letters_and_leaves_phrases_alone() {
+        assert!(entry_matches_fuzzy("improve", "improev"));
+        assert!(
+            !entry_matches_fuzzy("code", "cdoe"),
+            "4-letter entries stay exact"
+        );
+        assert!(
+            !entry_matches_fuzzy("write", "wri"),
+            "short words stay exact"
+        );
+        assert!(
+            entry_matches_fuzzy("write", "white"),
+            "5 letters: one substitution"
+        );
+        assert!(
+            entry_matches_fuzzy("διορθ*", "διοθρωσε"),
+            "prefix entries tolerate a typo in the stem"
+        );
+        assert!(
+            !entry_matches_fuzzy("fix*", "fxi"),
+            "short stems stay exact"
+        );
     }
 }

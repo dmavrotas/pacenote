@@ -50,6 +50,7 @@ fn main() {
 
     accuracy(&mut report, dir.path(), &truth);
     lint_quality(&mut report);
+    typo_robustness(&mut report);
     throughput(&mut report, dir.path(), &truth);
     hook_latency(&mut report);
 
@@ -366,6 +367,101 @@ fn load_prompts(name: &str) -> Vec<Labelled> {
 
 fn flags_vague(prompt: &str) -> bool {
     lint(prompt).iter().any(|f| f.code == "vague-target")
+}
+
+/// Every language's prompts for one split, pooled.
+fn pooled_corpus(held_out: bool) -> Vec<Labelled> {
+    LANGUAGES
+        .iter()
+        .flat_map(|lang| {
+            let suffix = if *lang == "en" {
+                String::new()
+            } else {
+                format!(".{lang}")
+            };
+            let stem = if held_out {
+                "prompts-holdout"
+            } else {
+                "prompts"
+            };
+            load_prompts(&format!("{stem}{suffix}.jsonl"))
+        })
+        .collect()
+}
+
+/// Corrupts plain alphabetic words longer than three letters with probability
+/// `percent`: one deletion or one adjacent transposition at an interior
+/// position. Paths, identifiers and punctuation-bearing tokens are left alone,
+/// so the anchors that make a prompt specific survive.
+fn add_typos(text: &str, percent: u64, rng: &mut Rng) -> String {
+    text.split(' ')
+        .map(|word| {
+            let mut chars: Vec<char> = word.chars().collect();
+            if chars.len() <= 3 || !chars.iter().all(|c| c.is_alphabetic()) || !rng.chance(percent)
+            {
+                return word.to_string();
+            }
+            let p = rng.range(1, chars.len() as u64 - 2) as usize;
+            if rng.chance(50) {
+                chars.remove(p);
+            } else {
+                chars.swap(p - 1, p);
+            }
+            chars.into_iter().collect()
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn typo_robustness(report: &mut String) {
+    let _ = writeln!(report, "### 2b. Lint robustness to typos\n");
+    let _ = writeln!(
+        report,
+        "The same prompts with a share of their plain words mistyped (one deletion or adjacent \
+         transposition each; paths and identifiers untouched), pooled over all languages, \
+         averaged over 3 seeds. Words of five or more letters tolerate one typo; shorter words \
+         are matched exactly (a known limitation).\n"
+    );
+    let _ = writeln!(
+        report,
+        "| set | typo rate | prompts | precision | recall | F1 |"
+    );
+    let _ = writeln!(report, "|---|---:|---:|---:|---:|---:|");
+    for (name, held_out) in [("dev", false), ("held-out", true)] {
+        let corpus = pooled_corpus(held_out);
+        for percent in [0u64, 15, 30] {
+            let seeds: &[u64] = if percent == 0 { &[1] } else { &[1, 2, 3] };
+            let (mut tp, mut fp, mut fn_, mut n) = (0, 0, 0, 0);
+            for seed in seeds {
+                let mut rng = Rng(0x7e57_0000 + seed);
+                for item in &corpus {
+                    n += 1;
+                    match (
+                        flags_vague(&add_typos(&item.prompt, percent, &mut rng)),
+                        item.vague,
+                    ) {
+                        (true, true) => tp += 1,
+                        (true, false) => fp += 1,
+                        (false, true) => fn_ += 1,
+                        (false, false) => {}
+                    }
+                }
+            }
+            let (precision, recall) = (ratio(tp, tp + fp), ratio(tp, tp + fn_));
+            let f1 = if precision + recall > 0.0 {
+                2.0 * precision * recall / (precision + recall)
+            } else {
+                0.0
+            };
+            let _ = writeln!(
+                report,
+                "| {name} | {percent}% | {n} | {:.1}% | {:.1}% | {f1:.3} |",
+                precision * 100.0,
+                recall * 100.0
+            );
+        }
+    }
+    let _ = writeln!(report);
 }
 
 fn lint_quality(report: &mut String) {

@@ -130,9 +130,11 @@ fn is_question(text: &str, words: &[String], packs: &[&Lang]) -> bool {
     let marks = text.matches(['?', ';', '\u{037e}']).count();
     text.ends_with(['?', ';', '\u{037e}'])
         && marks == 1
-        && words
-            .first()
-            .is_some_and(|w| packs.iter().any(|l| lang::list_has(l.question_words, w)))
+        && words.first().is_some_and(|w| {
+            packs
+                .iter()
+                .any(|l| lang::list_has_fuzzy(l.question_words, w))
+        })
 }
 
 /// Is this word generic (or a task verb or symptom) in any active pack,
@@ -140,12 +142,12 @@ fn is_question(text: &str, words: &[String], packs: &[&Lang]) -> bool {
 fn is_generic(word: &str, packs: &[&Lang]) -> bool {
     let known = |w: &str| {
         packs.iter().any(|l| {
-            lang::list_has(l.generic, w)
-                || lang::list_has(l.task_verbs, w)
+            lang::list_has_fuzzy(l.generic, w)
+                || lang::list_has_fuzzy(l.task_verbs, w)
                 // A symptom ("crashes", "σκάει") signals the task, not its target.
                 || l.task_phrases
                     .iter()
-                    .any(|p| !p.contains(' ') && lang::entry_matches(p, w))
+                    .any(|p| !p.contains(' ') && lang::entry_matches_fuzzy(p, w))
         })
     };
     known(word)
@@ -294,6 +296,61 @@ mod tests {
         ] {
             assert!(codes(p).contains(&"vague-target"), "{p}");
         }
+    }
+
+    #[test]
+    fn typos_in_long_words_do_not_hide_a_vague_prompt() {
+        for p in [
+            "improev the code",                      // transposition
+            "refactr this",                          // deletion in a task verb
+            "optimze the performance",               // deletion
+            "udpate the docs",                       // transposition
+            "fix the crahs",                         // transposition in a generic noun
+            "implment the feature",                  // deletion
+            "can you improve the perfomance please", // typo in a generic noun
+        ] {
+            assert!(codes(p).contains(&"vague-target"), "{p}");
+        }
+    }
+
+    #[test]
+    fn typo_tolerance_does_not_make_specific_prompts_vague() {
+        for p in [
+            "add a white background", // `white` is one edit from the verb `write`
+            "refactor the form",      // 4 letters: exact matching only (`from`)
+            "fix the sidebar",
+            "improve the parser",
+            "update the pricing page",
+            "make the header sticky",
+            "fix the pagination bug",
+        ] {
+            assert!(!codes(p).contains(&"vague-target"), "{p}");
+        }
+    }
+
+    #[test]
+    fn a_typo_in_the_question_word_still_reads_as_a_question() {
+        for p in [
+            "pourqui tu as changé ça ?",
+            "γιταί το άλλαξες αυτό;",
+            "whihc function did you change?",
+        ] {
+            assert!(!is_task_request(p), "{p}");
+            assert!(codes(p).is_empty(), "{p}");
+        }
+    }
+
+    #[test]
+    fn short_words_stay_exact() {
+        // Documented limitation: one edit in a 3-4 letter word is too ambiguous.
+        assert!(codes("fxi it").is_empty());
+        assert!(!codes("fix the cdoe").contains(&"vague-target"));
+    }
+
+    #[test]
+    fn typo_tolerant_task_detection() {
+        assert!(is_task_request("optimze this function"));
+        assert!(!is_task_request("thanks, looks good"));
     }
 
     #[test]
