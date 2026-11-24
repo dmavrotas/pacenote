@@ -1,0 +1,61 @@
+{"task": true, "kind": "task", "prompt": "behebe es"}
+{"task": true, "kind": "task", "prompt": "behebe den Bug"}
+{"task": true, "kind": "task", "prompt": "kannst du das fixen?"}
+{"task": true, "kind": "task", "prompt": "es funktioniert nicht, mach es heile"}
+{"task": true, "kind": "task", "prompt": "mach es schneller"}
+{"task": true, "kind": "task", "prompt": "verbessere den Code"}
+{"task": true, "kind": "task", "prompt": "füge Fehlerbehandlung hinzu"}
+{"task": true, "kind": "task", "prompt": "füge Logging hinzu"}
+{"task": true, "kind": "task", "prompt": "schreib Tests dafür"}
+{"task": true, "kind": "task", "prompt": "der Build ist rot"}
+{"task": true, "kind": "task", "prompt": "löse das Problem"}
+{"task": true, "kind": "task", "prompt": "räum den Code auf"}
+{"task": true, "kind": "task", "prompt": "refaktoriere das"}
+{"task": true, "kind": "task", "prompt": "die App stürzt ab, behebe das"}
+{"task": true, "kind": "task", "prompt": "aktualisiere die Doku"}
+{"task": true, "kind": "task", "prompt": "behebe den Off-by-one in paginate(), damit tests/test_pagination.py durchläuft"}
+{"task": true, "kind": "task", "prompt": "füge in http/client.go Retries mit exponentiellem Backoff hinzu, maximal 3 Versuche"}
+{"task": true, "kind": "task", "prompt": "der Endpoint /users liefert 500, wenn die E-Mail fehlt, er soll 400 liefern"}
+{"task": true, "kind": "task", "prompt": "schreib Unit-Tests für parse_duration() in utils/time.py"}
+{"task": true, "kind": "task", "prompt": "behebe die NullPointerException in OrderController.checkout()"}
+{"task": true, "kind": "task", "prompt": "benenne get_user im ganzen Projekt in fetch_user um"}
+{"task": true, "kind": "task", "prompt": "aktualisiere axios in package.json auf 1.7 und behebe die Typfehler"}
+{"task": true, "kind": "task", "prompt": "füge einen Index auf orders(customer_id, created_at) in einer neuen Migration hinzu"}
+{"task": true, "kind": "task", "prompt": "das Login-Formular wird bei Enter doppelt abgeschickt, behebe das in LoginForm.tsx"}
+{"task": true, "kind": "task", "prompt": "mach das Dockerfile multi-stage, damit das finale Image keine Go-Toolchain enthält"}
+{"task": true, "kind": "task", "prompt": "behebe den Fehler „connection refused“ beim Start des Workers"}
+{"task": true, "kind": "task", "prompt": "füge limit/offset-Paginierung zu GET /api/products hinzu"}
+{"task": false, "kind": "reply/question/process", "prompt": "ja"}
+{"task": false, "kind": "reply/question/process", "prompt": "ok"}
+{"task": false, "kind": "reply/question/process", "prompt": "leg los"}
+{"task": false, "kind": "reply/question/process", "prompt": "weiter"}
+{"task": false, "kind": "reply/question/process", "prompt": "super, danke!"}
+{"task": false, "kind": "reply/question/process", "prompt": "was macht diese Funktion?"}
+{"task": false, "kind": "reply/question/process", "prompt": "warum hast du das geändert?"}
+{"task": false, "kind": "reply/question/process", "prompt": "zeig mir den Diff"}
+{"task": false, "kind": "reply/question/process", "prompt": "committe es"}
+{"task": false, "kind": "reply/question/process", "prompt": "warte, stopp"}
+{"task": true, "kind": "task", "prompt": "behebe die fehlschlagenden Tests"}
+{"task": true, "kind": "task", "prompt": "aktualisiere die Dokumentation"}
+{"task": false, "kind": "continuation", "prompt": "behebe es genauso wie das vorherige"}
+{"task": true, "kind": "task", "prompt": "behebe den Bug, bei dem die Warenkorbsumme mit einem 100%-Gutschein negativ wird"}
+{"task": true, "kind": "task", "prompt": "also ich sitze jetzt schon den ganzen Nachmittag daran und verstehe wirklich nicht mehr was hier los ist, kannst du bitte übernehmen und es einfach reparieren, egal was das Problem ist, das würde mir sehr helfen weil ich ziemlich müde bin"}
+{"task": true, "kind": "task", "prompt": "kannst du das bitte schneller machen, es ist schon lange langsam und alle im Team beschweren sich darüber, mir ist egal wie du das machst solange es am Ende deutlich schneller ist als jetzt gerade, danke dir schon mal im Voraus dafür"}
+{"task": true, "kind": "task", "prompt": "ich hätte gern dass du den Code ein bisschen aufräumst, er ist mit der Zeit ziemlich schwer zu verstehen geworden und es gibt sicher viele Dinge die man vereinfachen könnte, also refaktoriere bitte alles was es deiner Meinung nach braucht"}
+{"task": true, "kind": "task", "prompt": "es stürzt schon wieder ab, so ungefähr wie letzte Woche, ich dachte ehrlich gesagt das wäre erledigt aber anscheinend ist es zurück, kannst du dir das diesmal richtig ansehen und es endgültig lösen damit wir nicht ständig darauf zurückkommen müssen"}
+{"task": true, "kind": "task", "prompt": "die Tests schlagen fehl und ich weiß nicht warum, gestern liefen sie noch wenn ich mich richtig erinnere und ich habe nichts angefasst was damit zu tun hat, kannst du nachsehen was los ist und sie reparieren damit wir heute noch mergen können"}
+{"task": true, "kind": "task", "prompt": "die Suchergebnisseite im Shop braucht fast vier Sekunden zum Laden wenn ein Kunde gleichzeitig nach Marke und Größe filtert, anscheinend fragen wir die Lagertabelle einmal pro Produkt ab, bitte fasse diese Abfragen zusammen und behalte die aktuelle Sortierung bei"}
+{"task": true, "kind": "task", "prompt": "füge einen Exportknopf zur Monatsberichtsseite hinzu der die sichtbare Tabelle als Tabellenkalkulation herunterlädt, mit dem Währungssymbol in den Betragsspalten, und berücksichtige den Zeitraum den die Buchhalterin ausgewählt hat, und zwar für den ganzen Monat"}
+{"task": true, "kind": "task", "prompt": "wenn zwei Lagerarbeiter dasselbe Paket innerhalb einer Sekunde scannen sinkt der Bestand zweimal, der Scanner muss doppelte Scans desselben Barcodes ignorieren, und der zweite Arbeiter soll eine verständliche Meldung sehen statt einer Fehlermeldung"}
+{"task": true, "kind": "task", "prompt": "ok ich habe die App getestet und alles gemergt, jetzt müssen wir sie etwas hübscher machen und bessere Beispieldaten haben, zum Beispiel Turniere, Spiele und Spieler mit realistischen Namen damit neue Nutzer verstehen wie alles zusammenhängt"}
+{"task": false, "kind": "reply/question/process", "prompt": "das ergibt sehr viel Sinn, danke dass du mir das Schritt für Schritt erklärt hast, ich hatte Angst dass wir einen großen Teil neu schreiben müssen aber das ist viel weniger Arbeit als erwartet, lass uns deinen Vorschlag nehmen"}
+{"task": false, "kind": "reply/question/process", "prompt": "was wäre der Nachteil wenn wir vorerst alles in einer einzigen Datenbank lassen und sie erst später aufteilen wenn wir wirklich mehr Kunden haben, ich habe das Gefühl wir lösen ein Problem das wir noch gar nicht haben?"}
+{"task": true, "kind": "task", "prompt": "es funktioniert nicht auf dem Tablet, wenn ein Trainer mit dem Stift einen Spielzug zeichnet und dann das Gerät dreht springt die Zeichnung an die falsche Stelle des Spielfelds, sie sollte in beiden Ausrichtungen an den Linien bleiben"}
+{"task": false, "kind": "reply", "prompt": "super, genau das habe ich gebraucht"}
+{"task": false, "kind": "question", "prompt": "funktioniert das auch unter Windows?"}
+{"task": false, "kind": "continuation", "prompt": "dasselbe bitte für die mobile App"}
+{"task": true, "kind": "wish", "prompt": "ich hätte gern dass die Tabelle nach Datum sortierbar ist"}
+{"task": false, "kind": "continuation", "prompt": "gut, der Teil funktioniert jetzt, also mach bitte mit den nächsten Punkten auf der Liste in der vereinbarten Reihenfolge weiter, und sag mir Bescheid wenn du auf etwas stößt das eine Entscheidung von mir braucht"}
+{"task": false, "kind": "process", "prompt": "ab jetzt halte die Commit-Nachrichten bitte kurz und im Imperativ, und nenne immer die Ticketnummer am Ende der ersten Zeile damit das Tracking-Tool sie automatisch übernimmt"}
+{"task": false, "kind": "reply", "prompt": "danke, das war wirklich hilfreich, ich wusste nicht dass der Cache zwischen den beiden Workern geteilt wird, das erklärt viel von dem seltsamen Verhalten letzte Woche, ich erzähle es morgen dem Team"}
+{"task": true, "kind": "wish", "prompt": "es wäre sehr nützlich wenn die Kalenderansicht die Feiertage im Land des Nutzers anzeigt, grau wie die Wochenenden, damit Manager an diesen Tagen keine Meetings mehr ansetzen"}

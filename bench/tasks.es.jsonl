@@ -1,0 +1,61 @@
+{"task": true, "kind": "task", "prompt": "arréglalo"}
+{"task": true, "kind": "task", "prompt": "arregla el bug"}
+{"task": true, "kind": "task", "prompt": "¿puedes arreglar esto?"}
+{"task": true, "kind": "task", "prompt": "no funciona, arréglalo"}
+{"task": true, "kind": "task", "prompt": "hazlo más rápido"}
+{"task": true, "kind": "task", "prompt": "mejora el código"}
+{"task": true, "kind": "task", "prompt": "añade manejo de errores"}
+{"task": true, "kind": "task", "prompt": "agrega logs"}
+{"task": true, "kind": "task", "prompt": "escribe tests para esto"}
+{"task": true, "kind": "task", "prompt": "el build está en rojo"}
+{"task": true, "kind": "task", "prompt": "resuelve el problema"}
+{"task": true, "kind": "task", "prompt": "limpia el código"}
+{"task": true, "kind": "task", "prompt": "refactoriza esto"}
+{"task": true, "kind": "task", "prompt": "la app se cae, arréglala"}
+{"task": true, "kind": "task", "prompt": "actualiza la documentación"}
+{"task": true, "kind": "task", "prompt": "corrige el off-by-one en paginate() para que pase tests/test_pagination.py"}
+{"task": true, "kind": "task", "prompt": "añade reintentos con backoff exponencial en http/client.go, máximo 3 intentos"}
+{"task": true, "kind": "task", "prompt": "el endpoint /users devuelve 500 cuando falta el email, debe devolver 400"}
+{"task": true, "kind": "task", "prompt": "escribe tests unitarios para parse_duration() en utils/time.py"}
+{"task": true, "kind": "task", "prompt": "arregla el NullPointerException en OrderController.checkout()"}
+{"task": true, "kind": "task", "prompt": "renombra get_user a fetch_user en todo el proyecto"}
+{"task": true, "kind": "task", "prompt": "sube axios a 1.7 en package.json y corrige los errores de tipos"}
+{"task": true, "kind": "task", "prompt": "añade un índice en orders(customer_id, created_at) en una nueva migración"}
+{"task": true, "kind": "task", "prompt": "el formulario de login se envía dos veces al pulsar Enter, arréglalo en LoginForm.tsx"}
+{"task": true, "kind": "task", "prompt": "haz el Dockerfile multi-stage para que la imagen final no incluya el toolchain de Go"}
+{"task": true, "kind": "task", "prompt": "arregla el error \"connection refused\" al arrancar el worker"}
+{"task": true, "kind": "task", "prompt": "añade paginación limit/offset a GET /api/products"}
+{"task": false, "kind": "reply/question/process", "prompt": "sí"}
+{"task": false, "kind": "reply/question/process", "prompt": "vale"}
+{"task": false, "kind": "reply/question/process", "prompt": "adelante"}
+{"task": false, "kind": "reply/question/process", "prompt": "continúa"}
+{"task": false, "kind": "reply/question/process", "prompt": "perfecto, ¡gracias!"}
+{"task": false, "kind": "reply/question/process", "prompt": "¿qué hace esta función?"}
+{"task": false, "kind": "reply/question/process", "prompt": "¿por qué cambiaste eso?"}
+{"task": false, "kind": "reply/question/process", "prompt": "enséñame el diff"}
+{"task": false, "kind": "reply/question/process", "prompt": "haz commit"}
+{"task": false, "kind": "reply/question/process", "prompt": "espera, para"}
+{"task": true, "kind": "task", "prompt": "arregla los tests que fallan"}
+{"task": true, "kind": "task", "prompt": "actualiza la documentación"}
+{"task": false, "kind": "continuation", "prompt": "arréglalo igual que el anterior"}
+{"task": true, "kind": "task", "prompt": "arregla el bug en el que el total del carrito queda negativo con un cupón del 100%"}
+{"task": true, "kind": "task", "prompt": "bueno, llevo toda la tarde con esto y de verdad ya no entiendo qué está pasando, ¿puedes encargarte tú y simplemente arreglarlo?, sea cual sea el problema, me ayudarías muchísimo porque la verdad es que estoy bastante cansado ya a estas horas"}
+{"task": true, "kind": "task", "prompt": "¿puedes hacer esto más rápido por favor?, lleva mucho tiempo siendo lento y todo el equipo se queja de ello, me da igual cómo lo hagas mientras acabe siendo bastante más rápido de lo que es ahora mismo, gracias de antemano"}
+{"task": true, "kind": "task", "prompt": "me gustaría que limpiaras un poco el código, se ha vuelto bastante difícil de seguir con el tiempo y seguro que hay muchas cosas que se podrían simplificar, así que adelante, refactoriza lo que creas que lo necesite y déjalo todo ordenado"}
+{"task": true, "kind": "task", "prompt": "se vuelve a colgar, más o menos como la semana pasada, sinceramente pensaba que ya estaba resuelto pero parece que ha vuelto, ¿puedes mirarlo en serio esta vez y resolverlo de una vez por todas para no tener que volver otra vez a lo mismo?"}
+{"task": true, "kind": "task", "prompt": "las pruebas fallan y no sé por qué, ayer pasaban si no recuerdo mal y no he tocado nada relacionado, ¿puedes ir a ver qué está pasando y arreglarlas para que podamos fusionar hoy sin problemas?, te lo agradecería mucho la verdad"}
+{"task": true, "kind": "task", "prompt": "la página de resultados de búsqueda de la tienda tarda casi cuatro segundos en cargar cuando un cliente filtra por marca y talla a la vez, parece que consultamos la tabla de inventario una vez por producto, agrupa esas consultas y mantén el orden actual"}
+{"task": true, "kind": "task", "prompt": "añade un botón de exportación en la pantalla del informe mensual que descargue la tabla visible como hoja de cálculo, con el símbolo de la moneda en las columnas de importes y respetando el rango de fechas que eligió el contable"}
+{"task": true, "kind": "task", "prompt": "cuando dos trabajadores del almacén escanean el mismo paquete con un segundo de diferencia el stock baja dos veces, el escáner tiene que ignorar los escaneos duplicados del mismo código de barras, y el segundo trabajador debe ver un mensaje claro"}
+{"task": true, "kind": "task", "prompt": "vale, he probado la aplicación y lo he fusionado todo, ahora hay que hacerla un poco más bonita y tener mejores datos de ejemplo, por ejemplo torneos, partidos y jugadores con nombres realistas para que los usuarios nuevos lo entiendan"}
+{"task": false, "kind": "reply/question/process", "prompt": "tiene mucho sentido, gracias por explicármelo paso a paso, tenía miedo de que tuviéramos que reescribir una gran parte pero es mucho menos trabajo de lo que esperaba, vamos con tu propuesta y ya veremos qué tal sale todo al final"}
+{"task": false, "kind": "reply/question/process", "prompt": "¿cuál sería el inconveniente de mantener todo en una sola base de datos por ahora y separarla más adelante cuando de verdad tengamos más clientes?, tengo la sensación de que estamos resolviendo un problema que todavía no tenemos"}
+{"task": true, "kind": "task", "prompt": "no funciona en la tableta, cuando un entrenador dibuja una jugada con el lápiz y luego gira el dispositivo el dibujo salta a una parte equivocada de la pista, debería quedarse pegado a las líneas de la pista en las dos orientaciones"}
+{"task": false, "kind": "reply", "prompt": "genial, justo lo que necesitaba"}
+{"task": false, "kind": "question", "prompt": "¿esto también funciona en Windows?"}
+{"task": false, "kind": "continuation", "prompt": "lo mismo para la aplicación móvil"}
+{"task": true, "kind": "wish", "prompt": "me gustaría que la tabla se pudiera ordenar por fecha"}
+{"task": false, "kind": "continuation", "prompt": "bien, esa parte ya funciona, así que sigue con los siguientes puntos de la lista en el orden que acordamos, y avísame si encuentras algo que necesite una decisión mía por el camino"}
+{"task": false, "kind": "process", "prompt": "a partir de ahora, mantén los mensajes de commit cortos y en imperativo, y menciona siempre el número del ticket al final de la primera línea para que el gestor lo recoja automáticamente"}
+{"task": false, "kind": "reply", "prompt": "gracias, me ha sido muy útil, no sabía que la caché se compartía entre los dos workers, eso explica mucho del comportamiento raro que vimos la semana pasada, se lo contaré al equipo mañana"}
+{"task": true, "kind": "wish", "prompt": "sería muy útil que la vista de calendario mostrara los festivos del país del usuario, en gris como los fines de semana, para que los responsables dejen de programar reuniones esos días"}

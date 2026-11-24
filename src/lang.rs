@@ -24,6 +24,14 @@ pub struct Lang {
     pub question_words: &'static [&'static str],
     /// Words that state what "done" looks like.
     pub done_markers: &'static [&'static str],
+    /// Phrases that turn a wish or a need into a request ("I'd like", "we need").
+    pub wish_phrases: &'static [&'static str],
+    /// Version-control and review chores ("commit", "push", "PR"): a prompt
+    /// made only of these is a process command, not a change request.
+    pub process_words: &'static [&'static str],
+    /// Phrases that continue earlier work ("do the same", "carry on") rather
+    /// than start a new task.
+    pub continuation_phrases: &'static [&'static str],
     /// Words meaning "line" (as in "line 42").
     pub line_words: &'static [&'static str],
     /// Frequent function words used to detect the language.
@@ -253,6 +261,7 @@ pub static EN: Lang = Lang {
         "fix", "add", "implement", "refactor", "debug", "update", "change", "make", "create",
         "write", "build", "investigate", "optimize", "optimise", "improve", "remove", "delete",
         "rename", "migrate", "support", "handle", "resolve", "clean", "speed",
+        "increase", "decrease", "reduce", "switch", "drop", "prevent", "replace", "split", "move", "convert", "enable", "disable", "allow", "validate", "hide", "extract", "upgrade", "bump", "install", "configure", "integrate",
     ],
     task_phrases: &[
         "broken", "failing", "fails", "crashes", "crashing", "red", "throws", "not working",
@@ -285,6 +294,9 @@ pub static EN: Lang = Lang {
         "should", "must", "expect", "so that", "until", "pass", "passes", "test", "tests",
         "returns", "verify", "done when", "acceptance", "without breaking",
     ],
+    wish_phrases: &["i'd like", "i would like", "i want", "we need", "we should", "it would be nice", "it would be great", "it would be useful", "it would be really", "set up", "get rid of"],
+    process_words: &["commit", "commits", "push", "merge", "pr", "rebase", "squash", "review", "diff", "branch"],
+    continuation_phrases: &["same way", "do the same", "same for", "same thing", "continue with", "carry on", "keep going", "next step", "next steps", "next items", "the rest", "remaining steps", "remaining items"],
     line_words: &["line"],
     markers: &["the", "is", "and", "to", "it", "this", "with", "for", "a", "of", "in", "on", "can", "you"],
     messages: Messages {
@@ -309,6 +321,7 @@ pub static EL: Lang = Lang {
         "βελτιωσ*", "βελτιωστ*", "ενημερωσ*", "ενημερωστ*", "αλλαξ*", "δημιουργησ*",
         "γραψ*", "αφαιρεσ*", "σβησ*", "διαγραψ*", "μετονομασ*", "βελτιστοποιησ*", "χειρισ*",
         "λυσ*", "επιλυσ*", "καθαρισ*", "κανε", "καν", "ερευνησ*", "ψαξ*", "επιταχυν*",
+        "αυξησ*", "μειωσ*", "αντικαταστησ*", "αποτρεψ*", "μετακινησ*", "μετατρεψ*", "ενεργοποιησ*", "απενεργοποιησ*", "επικυρωσ*", "κρυψ*", "εγκαταστησ*", "ρυθμισ*", "ενσωματωσ*", "εξαγαγ*",
     ],
     task_phrases: &[
         "δεν δουλευει", "δεν λειτουργει", "δε δουλευει", "δε λειτουργει", "χαλασμεν*",
@@ -341,6 +354,9 @@ pub static EL: Lang = Lang {
     done_markers: &[
         "πρεπει", "ωστε", "μεχρι", "περν*", "τεστ", "επιστρεφ*", "επαληθευσ*", "επιβεβαιωσ*",
     ],
+    wish_phrases: &["θελω", "θα ηθελα", "χρειαζομαστε", "πρεπει να", "θα ηταν"],
+    process_words: &["commit", "commits", "push", "merge", "pr", "rebase", "squash", "review", "diff", "branch"],
+    continuation_phrases: &["ιδιο τροπο", "το ιδιο", "συνεχισε", "επομενα", "υπολοιπα βηματα"],
     line_words: &["γραμμη"],
     markers: &[],
     messages: Messages {
@@ -366,6 +382,7 @@ pub static FR: Lang = Lang {
         "creez", "ecri*", "construi*", "optimis*", "amelior*", "supprim*", "enleve", "retire",
         "renomm*", "migr*", "gere", "gerer", "gerez", "resou*", "regle", "regler", "reglez",
         "nettoi*", "nettoy*", "accelere*", "mets", "mettez", "mettre", "passe", "permets",
+        "augment*", "diminu*", "redui*", "remplac*", "empech*", "deplac*", "convert*", "activ*", "desactiv*", "valid*", "masqu*", "install*", "configur*", "integr*", "extrai*",
     ],
     task_phrases: &[
         "ne marche pas", "marche pas", "ne fonctionne pas", "fonctionne pas", "marche plus",
@@ -402,6 +419,9 @@ pub static FR: Lang = Lang {
         "doit", "doivent", "devrait", "pour que", "afin que", "jusqu'a", "passe", "passent",
         "test", "tests", "renvoie", "renvoyer", "retourne", "verifie*",
     ],
+    wish_phrases: &["j aimerais", "je voudrais", "je veux", "il faut", "il faudrait", "on doit", "ce serait bien", "ce serait utile", "ce serait vraiment", "ce serait super"],
+    process_words: &["commit", "commits", "push", "merge", "fusion*", "pr", "rebase", "squash", "relis", "relire", "diff", "branche"],
+    continuation_phrases: &["meme facon", "de la meme", "pareil", "continue avec", "la suite", "etapes suivantes", "elements suivants", "reste du"],
     line_words: &["ligne"],
     markers: &[
         "le", "la", "les", "des", "est", "une", "pas", "ne", "ce", "et", "pour", "dans", "avec",
@@ -431,6 +451,7 @@ pub static ES: Lang = Lang {
         "escrib*", "constru*", "optimiz*", "mejora", "mejorar", "mejoralo", "elimin*", "borr*",
         "quit*", "renombr*", "migr*", "manej*", "resuelv*", "resolv*", "soluciona*", "limpi*",
         "aceler*", "sube", "permite",
+        "aument*", "reduc*", "reemplaz*", "sustitu*", "evit*", "mueve", "mover", "convert*", "conviert*", "activ*", "desactiv*", "valid*", "ocult*", "instal*", "configur*", "integr*", "extrae", "extraer",
     ],
     task_phrases: &[
         "no funciona", "no anda", "esta roto", "esta rota", "falla", "fallan", "se cae",
@@ -465,6 +486,9 @@ pub static ES: Lang = Lang {
         "debe", "deben", "deberia", "para que", "hasta que", "pase", "pasen", "test", "tests",
         "prueba", "pruebas", "devuelve", "devolver", "retorna", "verific*",
     ],
+    wish_phrases: &["me gustaria", "quiero que", "hay que", "necesitamos", "deberiamos", "estaria genial", "estaria bien", "seria util", "seria genial", "seria muy"],
+    process_words: &["commit", "commits", "push", "merge", "fusion*", "pr", "rebase", "squash", "revisa", "diff", "rama"],
+    continuation_phrases: &["igual que", "lo mismo", "sigue con", "continua con", "siguientes puntos", "pasos siguientes", "resto del", "que quedan"],
     line_words: &["linea"],
     markers: &[
         "el", "los", "las", "una", "es", "que", "para", "con", "por", "esta", "y", "esto", "lo",
@@ -493,6 +517,7 @@ pub static DE: Lang = Lang {
         "machen", "erstell*", "schreib*", "bau", "baue", "optimier*", "verbesser*", "entfern*",
         "loesch*", "umbenenn*", "benenn*", "migrier*", "behandl*", "loes", "loese",
         "raeum*", "bereinig*", "beschleunig*", "sorg", "sorge", "stell",
+        "erhoeh*", "reduzier*", "verringer*", "ersetz*", "verhinder*", "verschieb*", "konvertier*", "aktivier*", "deaktivier*", "validier*", "versteck*", "installier*", "konfigurier*", "integrier*", "extrahier*", "wechsel*",
     ],
     task_phrases: &[
         "funktioniert nicht", "geht nicht", "laeuft nicht", "kaputt", "stuerzt ab",
@@ -529,6 +554,9 @@ pub static DE: Lang = Lang {
         "soll", "sollte", "muss", "muessen", "damit", "bis", "besteh*", "durchlaeuft",
         "durchlaufen", "gruen", "test", "tests", "zurueck*", "liefert", "pruef*", "verifizier*",
     ],
+    wish_phrases: &["ich moechte", "ich will", "ich haette gern", "ich haette gerne", "wir brauchen", "wir muessen", "wir sollten", "es waere"],
+    process_words: &["commit", "commits", "push", "merge", "mergen", "pr", "rebase", "squash", "review", "diff", "branch"],
+    continuation_phrases: &["genauso", "dasselbe", "mach weiter", "weiter mit", "naechsten punkte", "naechsten schritte", "rest des", "restlichen"],
     line_words: &["zeile"],
     markers: &[
         "der", "die", "das", "und", "ist", "nicht", "ein", "eine", "mit", "bitte", "den", "es",
@@ -627,6 +655,9 @@ mod tests {
                 lang.task_phrases,
                 lang.generic,
                 lang.continuations,
+                lang.wish_phrases,
+                lang.process_words,
+                lang.continuation_phrases,
                 lang.question_words,
                 lang.done_markers,
                 lang.line_words,
