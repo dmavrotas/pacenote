@@ -399,6 +399,38 @@ mod tests {
     }
 
     #[test]
+    fn wishes_and_needs_are_requests() {
+        for p in [
+            "I'd like the table to be sortable by date",
+            "we need an audit log for admin actions",
+            "il faudrait un journal d'audit",
+            "wir brauchen ein Audit-Log",
+            "θα ήθελα ο πίνακας να ταξινομείται",
+            "increase the Lambda timeout to 60s",
+        ] {
+            assert!(is_task_request(p), "{p}");
+        }
+    }
+
+    #[test]
+    fn continuations_and_chores_are_not_new_tasks() {
+        for p in [
+            "now do the same for the other endpoints",
+            "carry on with the rest",
+            "sigue con los siguientes puntos",
+            "commit and push",
+            "fais le commit",
+            "κάνε commit",
+            "review my changes",
+        ] {
+            assert!(!is_task_request(p), "{p}");
+            assert!(codes(p).is_empty(), "{p}");
+        }
+        // A chore next to a real target is still a task.
+        assert!(is_task_request("add a pre-commit hook that runs rustfmt"));
+    }
+
+    #[test]
     fn symptom_statements_are_tasks() {
         assert!(codes("it's not working").contains(&"vague-target"));
         assert!(codes("the build is red").contains(&"vague-target"));
