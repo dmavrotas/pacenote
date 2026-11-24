@@ -162,7 +162,7 @@ $ pacenote lint "διόρθωσέ το"
 pacenote [vague-target] Δεν υπάρχει συγκεκριμένος στόχος. Ανάφερε το αρχείο, τη συνάρτηση ή το ακριβές μήνυμα σφάλματος, …
 ```
 
-**Typos.** Real prompts are typed in a hurry, so words of five or more letters tolerate one typo (a deletion, insertion, substitution or swapped pair of letters): `improev the code` and `udpate the docs` are still recognised as vague requests. Shorter words are matched exactly, because one edit in a 3-4 letter word reaches too many real words (`form`/`from`, `mode`/`code`), so `fxi it` is not flagged. On the held-out prompts with 15% / 30% of the plain words mistyped, `vague-target` keeps 100% precision and 91% / 83% recall (see the "Lint robustness to typos" table in the offline benchmark).
+**Typos.** Real prompts are typed in a hurry, so words of five or more letters tolerate one typo (a deletion, insertion, substitution or swapped pair of letters): `improev the code` and `udpate the docs` are still recognised as vague requests. In 3-4 letter words, one edit reaches too many real words (`form`/`from`, `mode`/`code`), so only task verbs tolerate a typo there, and only two swapped letters after the first: `fxi it` and `mkae it faster` are flagged, while `six it` or a mistyped `cdoe` are not. On the held-out prompts with 15% / 30% of the plain words mistyped, `vague-target` keeps 100% precision and 92% / 84% recall (see the "Lint robustness to typos" table in the offline benchmark).
 
 Each language has a word pack in [`src/lang.rs`](src/lang.rs) and labelled prompts in `bench/prompts.<lang>.jsonl`. Adding a language means adding both; the benchmark scores it automatically.
 
@@ -173,6 +173,8 @@ Each language has a word pack in [`src/lang.rs`](src/lang.rs) and labelled promp
 | `vague-target` | warn | A short task request ("fix it", "fix the bug") names no file, identifier, line, or quoted error |
 | `large-paste` | warn | The prompt is over ~5k tokens; point to a file or trim to the first error instead |
 | `no-done-criteria` | info | A task request doesn't say what success looks like |
+
+`vague-target` only judges prompts of up to 30 words. Long prompts nearly always carry enough words to describe a target, and the one rule tried for long vague prompts (counting words that are rare in everyday language) was rejected: 83% precision on held-out prompts against a 90% bar set in advance. The labelled long prompts are kept in `bench/prompts-long*.jsonl` as the baseline for the next attempt.
 
 Rules only fire on prompts that look like task requests, so replies like "yes" or "go ahead" are never flagged.
 
@@ -207,7 +209,7 @@ Latest results: [offline](bench/results/offline.md) · [end-to-end](bench/result
 | `pacenote rewrite` (local, held-out tasks) vs vague prompts | −17% tokens, −24% cost |
 | `stats` accuracy vs ground truth | exact (a naive per-line sum overcounts by ~150%) |
 | `vague-target` on held-out prompts (5 languages) | 100% precision, 94–100% recall |
-| `vague-target` with 15% / 30% of words mistyped (held-out) | 100% precision, 91% / 83% recall |
+| `vague-target` with 15% / 30% of words mistyped (held-out) | 100% precision, 92% / 84% recall |
 | hook overhead per prompt | ~1.5 ms p50 |
 | scan throughput | ~740 MB/s |
 

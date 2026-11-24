@@ -63,7 +63,7 @@ pub fn lint(prompt: &str) -> Vec<Finding> {
         });
     }
 
-    let is_task = any(|l| l.task_verbs) || any(|l| l.task_phrases);
+    let is_task = has_task_verb(&words, packs) || any(|l| l.task_phrases);
     if !is_task || is_question(trimmed, &words, packs) {
         return findings;
     }
@@ -114,7 +114,7 @@ pub fn is_task_request(prompt: &str) -> bool {
             .iter()
             .any(|l| lang::mentions(list(l), &words, &phrase))
     };
-    (mentions(|l| l.task_verbs) || mentions(|l| l.task_phrases))
+    (has_task_verb(&words, &packs) || mentions(|l| l.task_phrases))
         && !is_question(trimmed, &words, &packs)
 }
 
@@ -122,6 +122,13 @@ pub fn is_task_request(prompt: &str) -> bool {
 pub fn detect_language(prompt: &str) -> &'static Lang {
     let trimmed = prompt.trim();
     lang::detect(&words(trimmed), trimmed)[0]
+}
+
+/// Does any word name a task verb in an active pack, typos included?
+fn has_task_verb(words: &[String], packs: &[&Lang]) -> bool {
+    words
+        .iter()
+        .any(|w| packs.iter().any(|l| lang::has_task_verb(l.task_verbs, w)))
 }
 
 /// A single question ("why did you change that?") rather than a request.
@@ -143,7 +150,7 @@ fn is_generic(word: &str, packs: &[&Lang]) -> bool {
     let known = |w: &str| {
         packs.iter().any(|l| {
             lang::list_has_fuzzy(l.generic, w)
-                || lang::list_has_fuzzy(l.task_verbs, w)
+                || lang::has_task_verb(l.task_verbs, w)
                 // A symptom ("crashes", "σκάει") signals the task, not its target.
                 || l.task_phrases
                     .iter()
@@ -341,10 +348,25 @@ mod tests {
     }
 
     #[test]
-    fn short_words_stay_exact() {
-        // Documented limitation: one edit in a 3-4 letter word is too ambiguous.
-        assert!(codes("fxi it").is_empty());
+    fn short_task_verbs_tolerate_a_swap() {
+        for p in [
+            "fxi it",
+            "mkae it faster",
+            "can you fxi the bug",
+            "mcah es schneller",
+        ] {
+            assert!(codes(p).contains(&"vague-target"), "{p}");
+        }
+    }
+
+    #[test]
+    fn other_short_words_stay_exact() {
+        // A swap in a 3-4 letter generic word is too ambiguous (`form`/`from`).
         assert!(!codes("fix the cdoe").contains(&"vague-target"));
+        // Only swaps, and never the first letter: `six`, `xfi`, `fx` are not `fix`.
+        for p in ["six it", "xfi it", "fx it", "take it"] {
+            assert!(codes(p).is_empty(), "{p}");
+        }
     }
 
     #[test]

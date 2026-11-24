@@ -9,7 +9,8 @@
 //! 1. **Stats accuracy**: synthetic transcripts with known ground truth,
 //!    compared against pacenote and against a naive per-line sum.
 //! 2. **Lint quality**: precision/recall of `vague-target` on the labelled
-//!    corpus in `bench/prompts.jsonl`.
+//!    corpus in `bench/prompts.jsonl`, its robustness to typos, and the
+//!    long-prompt corpus (`bench/prompts-long*.jsonl`).
 //! 3. **Scan throughput**: how fast `pacenote stats` reads transcripts.
 //! 4. **Hook latency**: the delay `pacenote hook prompt` adds to every prompt.
 //!
@@ -51,6 +52,7 @@ fn main() {
     accuracy(&mut report, dir.path(), &truth);
     lint_quality(&mut report);
     typo_robustness(&mut report);
+    long_prompts(&mut report);
     throughput(&mut report, dir.path(), &truth);
     hook_latency(&mut report);
 
@@ -389,15 +391,17 @@ fn pooled_corpus(held_out: bool) -> Vec<Labelled> {
         .collect()
 }
 
-/// Corrupts plain alphabetic words longer than three letters with probability
-/// `percent`: one deletion or one adjacent transposition at an interior
-/// position. Paths, identifiers and punctuation-bearing tokens are left alone,
+/// Corrupts plain alphabetic words of at least `min_len` letters with
+/// probability `percent`: one deletion or one adjacent transposition, never
+/// touching the last letter. Paths, identifiers and punctuation-bearing tokens are left alone,
 /// so the anchors that make a prompt specific survive.
-fn add_typos(text: &str, percent: u64, rng: &mut Rng) -> String {
+fn add_typos(text: &str, percent: u64, min_len: usize, rng: &mut Rng) -> String {
     text.split(' ')
         .map(|word| {
             let mut chars: Vec<char> = word.chars().collect();
-            if chars.len() <= 3 || !chars.iter().all(|c| c.is_alphabetic()) || !rng.chance(percent)
+            if chars.len() < min_len.max(3)
+                || !chars.iter().all(|c| c.is_alphabetic())
+                || !rng.chance(percent)
             {
                 return word.to_string();
             }
@@ -419,17 +423,18 @@ fn typo_robustness(report: &mut String) {
         report,
         "The same prompts with a share of their plain words mistyped (one deletion or adjacent \
          transposition each; paths and identifiers untouched), pooled over all languages, \
-         averaged over 3 seeds. Words of five or more letters tolerate one typo; shorter words \
-         are matched exactly (a known limitation).\n"
+         averaged over 3 seeds. Words of five or more letters tolerate one typo; 3-4 letter task \
+         verbs tolerate a swap after the first letter; other short words are matched exactly. \
+         Rows marked 3+ also corrupt 3-letter words (`fix`, `add`).\n"
     );
     let _ = writeln!(
         report,
-        "| set | typo rate | prompts | precision | recall | F1 |"
+        "| set | words hit | typo rate | prompts | precision | recall | F1 |"
     );
-    let _ = writeln!(report, "|---|---:|---:|---:|---:|---:|");
+    let _ = writeln!(report, "|---|---|---:|---:|---:|---:|---:|");
     for (name, held_out) in [("dev", false), ("held-out", true)] {
         let corpus = pooled_corpus(held_out);
-        for percent in [0u64, 15, 30] {
+        for (min_len, percent) in [(4, 0u64), (4, 15), (4, 30), (3, 15), (3, 30)] {
             let seeds: &[u64] = if percent == 0 { &[1] } else { &[1, 2, 3] };
             let (mut tp, mut fp, mut fn_, mut n) = (0, 0, 0, 0);
             for seed in seeds {
@@ -437,7 +442,7 @@ fn typo_robustness(report: &mut String) {
                 for item in &corpus {
                     n += 1;
                     match (
-                        flags_vague(&add_typos(&item.prompt, percent, &mut rng)),
+                        flags_vague(&add_typos(&item.prompt, percent, min_len, &mut rng)),
                         item.vague,
                     ) {
                         (true, true) => tp += 1,
@@ -455,11 +460,55 @@ fn typo_robustness(report: &mut String) {
             };
             let _ = writeln!(
                 report,
-                "| {name} | {percent}% | {n} | {:.1}% | {:.1}% | {f1:.3} |",
+                "| {name} | {min_len}+ letters | {percent}% | {n} | {:.1}% | {:.1}% | {f1:.3} |",
                 precision * 100.0,
                 recall * 100.0
             );
         }
+    }
+    let _ = writeln!(report);
+}
+
+/// Long prompts (more than 30 words) are outside `vague-target`'s scope.
+/// This section measures that gap so a future rule has a baseline.
+fn long_prompts(report: &mut String) {
+    let _ = writeln!(report, "### 2c. Long prompts (over 30 words)\n");
+    let _ = writeln!(
+        report,
+        "`vague-target` only judges prompts of up to 30 words, so long vague prompts are never \
+         flagged. A frequency-based rule for long prompts was tried and rejected (held-out \
+         precision 83% against a pre-registered 90% bar); these labelled sets are the baseline \
+         for the next attempt.\n"
+    );
+    let _ = writeln!(
+        report,
+        "| set | prompts | vague | flagged | false positives |"
+    );
+    let _ = writeln!(report, "|---|---:|---:|---:|---:|");
+    for (name, stem) in [
+        ("dev", "prompts-long"),
+        ("held-out", "prompts-long-holdout"),
+    ] {
+        let corpus: Vec<Labelled> = LANGUAGES
+            .iter()
+            .flat_map(|lang| {
+                let suffix = if *lang == "en" {
+                    String::new()
+                } else {
+                    format!(".{lang}")
+                };
+                load_prompts(&format!("{stem}{suffix}.jsonl"))
+            })
+            .collect();
+        let vague = corpus.iter().filter(|i| i.vague).count();
+        let flagged: Vec<&Labelled> = corpus.iter().filter(|i| flags_vague(&i.prompt)).collect();
+        let fp = flagged.iter().filter(|i| !i.vague).count();
+        let _ = writeln!(
+            report,
+            "| {name} | {} | {vague} | {} | {fp} |",
+            corpus.len(),
+            flagged.len()
+        );
     }
     let _ = writeln!(report);
 }
