@@ -144,6 +144,38 @@ pub fn entry_matches_fuzzy(entry: &str, word: &str) -> bool {
     }
 }
 
+/// Is `word` the 3-4 letter `entry` with two adjacent letters swapped, the
+/// first letter kept (`fxi` → `fix`, `mkae` → `make`)? Swaps are the typo
+/// hurried typing makes most, and the narrowest edit: a substitution would
+/// reach real words (`fix`/`six`, `make`/`take`).
+fn is_short_swap(entry: &str, word: &str) -> bool {
+    // A swap keeps the byte length and the first letter: reject without allocating.
+    if entry.len() != word.len() || entry.chars().next() != word.chars().next() {
+        return false;
+    }
+    let (e, w): (Vec<char>, Vec<char>) = (entry.chars().collect(), word.chars().collect());
+    if e.len() != w.len() || !(3..FUZZY_MIN_LEN).contains(&e.len()) || e[0] != w[0] {
+        return false;
+    }
+    let diff: Vec<usize> = (0..e.len()).filter(|&i| e[i] != w[i]).collect();
+    matches!(diff.as_slice(), [i, j] if *j == i + 1 && e[*i] == w[*j] && e[*j] == w[*i])
+}
+
+/// [`entry_matches_fuzzy`] for task verbs, which also tolerate a swap in a
+/// short exact entry. Only task verbs get this: misreading a word as a task
+/// verb is cheap (the prompt still has to be all generic to be flagged),
+/// while misreading it as generic would hide a real target.
+pub fn task_verb_matches(entry: &str, word: &str) -> bool {
+    entry_matches_fuzzy(entry, word) || (!entry.ends_with('*') && is_short_swap(entry, word))
+}
+
+/// Is `word` one of these task verbs, typos included (see [`task_verb_matches`])?
+pub fn has_task_verb(task_verbs: &[&str], word: &str) -> bool {
+    task_verbs
+        .iter()
+        .any(|entry| task_verb_matches(entry, word))
+}
+
 /// Does any entry match one of `words` (or, for phrases, appear in `phrase`,
 /// which is the words joined by single spaces and padded with spaces)?
 /// Single words tolerate a typo, see [`entry_matches_fuzzy`].
@@ -544,6 +576,21 @@ mod tests {
     fn umlaut_transliteration_keeps_aendern_and_andere_apart() {
         assert!(list_has(DE.task_verbs, &fold("ändere")));
         assert!(!list_has(DE.task_verbs, &fold("andere")));
+    }
+
+    #[test]
+    fn short_task_verbs_match_only_a_swap_after_the_first_letter() {
+        assert!(task_verb_matches("fix", "fxi"));
+        assert!(task_verb_matches("make", "mkae"));
+        assert!(task_verb_matches("make", "maek"));
+        for word in ["xfi", "six", "fx", "fixx", "mkea", "take"] {
+            assert!(
+                !task_verb_matches("fix", word) && !task_verb_matches("make", word),
+                "{word}"
+            );
+        }
+        // prefix entries keep the stem rule only
+        assert!(!task_verb_matches("fix*", "fxi"));
     }
 
     #[test]
