@@ -1,0 +1,40 @@
+{"task": true, "kind": "change", "prompt": "add pagination to the orders list"}
+{"task": true, "kind": "change", "prompt": "can you make the login form remember the email"}
+{"task": true, "kind": "symptom", "prompt": "the export keeps timing out for big accounts"}
+{"task": true, "kind": "wish", "prompt": "it would be nice if the invoices had a QR code"}
+{"task": true, "kind": "change", "prompt": "rename the billing module to payments"}
+{"task": true, "kind": "symptom", "prompt": "uploads over 10 MB fail silently"}
+{"task": true, "kind": "change", "prompt": "we need a retry when the webhook call fails"}
+{"task": true, "kind": "change", "prompt": "get rid of the old feature flags"}
+{"task": true, "kind": "wish", "prompt": "I want the sidebar to remember whether it was collapsed"}
+{"task": true, "kind": "change", "prompt": "please write a migration that adds an archived flag to projects"}
+{"task": false, "kind": "reply", "prompt": "perfect, thank you"}
+{"task": false, "kind": "reply", "prompt": "nope, that's not what I meant"}
+{"task": false, "kind": "question", "prompt": "what happens if the queue is full?"}
+{"task": false, "kind": "question", "prompt": "how would you fix the flaky test, just explain first"}
+{"task": false, "kind": "process", "prompt": "commit and push"}
+{"task": false, "kind": "process", "prompt": "run the linter"}
+{"task": false, "kind": "continuation", "prompt": "do the same for the admin pages"}
+{"task": false, "kind": "continuation", "prompt": "keep going with the next step"}
+{"task": false, "kind": "question", "prompt": "can you explain why the build broke yesterday?"}
+{"task": false, "kind": "reply", "prompt": "hmm, let me think about it and get back to you"}
+{"task": true, "kind": "change", "prompt": "so the reporting screen has grown quite a lot and now it takes ages to open for our bigger customers, could you split the heavy charts into tabs that load on demand and keep the summary numbers at the top so people see them right away"}
+{"task": true, "kind": "symptom", "prompt": "after the last deploy some users get logged out every few minutes, it seems to happen mostly on mobile and mostly for people who had the app open overnight, nothing obvious in the logs on our side so far, the session refresh is my main suspect"}
+{"task": true, "kind": "wish", "prompt": "I would really like coaches to be able to share a play with their assistants by link, the assistant should be able to view it without an account but only edit it if they are part of the team, and the link should expire after a week"}
+{"task": true, "kind": "change", "prompt": "let's add a proper onboarding checklist for new workspaces, invite your team, connect the calendar and create the first project, each item should tick itself off when done and the whole checklist should disappear once everything is complete"}
+{"task": true, "kind": "change", "prompt": "we need to support multiple currencies in the pricing page, show prices in euros for European visitors and in dollars for everyone else, and let people switch manually with a small selector next to the plan names in the header"}
+{"task": true, "kind": "symptom", "prompt": "the nightly import has been producing duplicate customers since Monday, every customer that changed their email address shows up twice, once with the old and once with the new address, and the sales team is starting to notice in their reports"}
+{"task": true, "kind": "change", "prompt": "please replace the hand-rolled date formatting across the frontend with the shared formatter we added last month, it already handles time zones and locales, and remove the old helpers once nothing references them anymore"}
+{"task": true, "kind": "wish", "prompt": "it would be great if the search box also matched players by their jersey number and nickname, coaches keep telling us they remember numbers better than names, especially for opponents they only saw once or twice during the season"}
+{"task": true, "kind": "change", "prompt": "can you build a small command line tool that takes a folder of match videos, extracts the timestamps where the score changes based on the scoreboard overlay, and writes them into a CSV file with one row per scoring event"}
+{"task": true, "kind": "change", "prompt": "we should stop sending the weekly summary email to people who have not logged in for three months, mark them as inactive instead, and send a single reactivation email with a link that brings them straight back to their dashboard"}
+{"task": false, "kind": "reply", "prompt": "that looks great, thanks a lot for the quick turnaround, I checked the screenshots on my phone and on the laptop and everything lines up nicely now, I'm happy with it so let's leave it as it is for today"}
+{"task": false, "kind": "question", "prompt": "before we go any further, can you walk me through how the permissions are checked when a user opens a shared board, I want to understand which part runs on the server and which part runs in the browser before we change anything"}
+{"task": false, "kind": "question", "prompt": "what do you think would be the better option here, keeping the sync logic in the mobile app and accepting some duplicated code, or moving everything into a shared library that both apps depend on, I can see arguments for both"}
+{"task": false, "kind": "continuation", "prompt": "ok that worked, now continue with the remaining steps of the plan in the same way, and keep each change in its own commit so it's easier for me to review them one by one when I'm back later this evening"}
+{"task": false, "kind": "process", "prompt": "everything looks fine on my side, so please commit all of this with a clear message, push the branch, open the pull request against main and request a review from the usual people on the backend team"}
+{"task": false, "kind": "reply", "prompt": "no, I don't think that's the right direction, the users we talked to were not asking for more options, they wanted fewer steps, so I'd rather we pause here and rethink the flow together tomorrow morning with fresh eyes"}
+{"task": false, "kind": "process", "prompt": "from now on please always run the full test suite and the linter before you tell me something is done, and if anything fails tell me straight away instead of trying to work around it silently"}
+{"task": false, "kind": "question", "prompt": "why did the migration take so long on staging, it was only adding a column with a default value, is that expected for a table of that size or did we do something unusual that we should avoid next time?"}
+{"task": false, "kind": "continuation", "prompt": "great, the first two endpoints are done, so do exactly the same thing for the remaining ones in the orders service, same error handling, same logging and the same kind of tests as the ones you just wrote"}
+{"task": false, "kind": "reply", "prompt": "I tried it again after restarting and it works now, so I guess it was just my local cache being weird, sorry for the noise, we can move on to whatever was next on the list"}

@@ -1,0 +1,16 @@
+{"task": true, "kind": "change", "prompt": "añade paginación a la lista de pedidos"}
+{"task": true, "kind": "symptom", "prompt": "la exportación se cuelga con las cuentas grandes"}
+{"task": true, "kind": "wish", "prompt": "quiero que la barra lateral recuerde si estaba plegada"}
+{"task": true, "kind": "change", "prompt": "cambia el nombre del módulo de facturación a pagos"}
+{"task": false, "kind": "reply", "prompt": "perfecto, muchas gracias"}
+{"task": false, "kind": "question", "prompt": "¿qué pasa si la cola está llena?"}
+{"task": false, "kind": "process", "prompt": "haz commit y push"}
+{"task": false, "kind": "continuation", "prompt": "haz lo mismo con las páginas de administración"}
+{"task": true, "kind": "change", "prompt": "la pantalla de informes ha crecido mucho y ahora tarda una eternidad en abrirse para los clientes grandes, ¿puedes separar los gráficos pesados en pestañas que se carguen bajo demanda y dejar las cifras principales arriba?"}
+{"task": true, "kind": "symptom", "prompt": "desde el último despliegue algunos usuarios pierden la sesión cada pocos minutos, sobre todo en el móvil y sobre todo quienes dejaron la aplicación abierta por la noche, de momento no vemos nada evidente en los registros"}
+{"task": true, "kind": "wish", "prompt": "estaría genial que el buscador también encontrara a los jugadores por su dorsal y su apodo, los entrenadores nos dicen que recuerdan mejor los números que los nombres, sobre todo de los rivales que solo vieron una vez"}
+{"task": true, "kind": "change", "prompt": "hay que dejar de enviar el resumen semanal a quienes no han entrado en tres meses, márcalos como inactivos y envía un único correo de reactivación con un enlace que los lleve directamente a su panel"}
+{"task": false, "kind": "reply", "prompt": "queda genial, muchas gracias por la rapidez, he mirado las capturas en el móvil y en el portátil y ahora todo está bien alineado, me gusta así que lo dejamos tal cual por hoy y seguimos mañana"}
+{"task": false, "kind": "question", "prompt": "antes de seguir, ¿me puedes explicar cómo se comprueban los permisos cuando un usuario abre un tablero compartido?, quiero entender qué parte se ejecuta en el servidor y qué parte en el navegador antes de cambiar nada"}
+{"task": false, "kind": "continuation", "prompt": "vale, ha funcionado, ahora sigue con los pasos que quedan del plan de la misma manera, y deja cada cambio en su propio commit para que pueda revisarlos uno por uno esta noche cuando vuelva"}
+{"task": false, "kind": "process", "prompt": "a partir de ahora ejecuta siempre todas las pruebas y el linter antes de decirme que algo está terminado, y si algo falla dímelo enseguida en lugar de intentar esquivarlo en silencio sin avisar"}
