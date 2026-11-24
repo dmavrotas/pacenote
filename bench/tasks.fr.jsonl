@@ -1,0 +1,61 @@
+{"task": true, "kind": "task", "prompt": "corrige-le"}
+{"task": true, "kind": "task", "prompt": "corrige le bug"}
+{"task": true, "kind": "task", "prompt": "tu peux corriger ça ?"}
+{"task": true, "kind": "task", "prompt": "ça ne marche pas, corrige"}
+{"task": true, "kind": "task", "prompt": "rends-le plus rapide"}
+{"task": true, "kind": "task", "prompt": "améliore le code"}
+{"task": true, "kind": "task", "prompt": "ajoute la gestion des erreurs"}
+{"task": true, "kind": "task", "prompt": "ajoute des logs"}
+{"task": true, "kind": "task", "prompt": "écris des tests pour ça"}
+{"task": true, "kind": "task", "prompt": "le build est rouge"}
+{"task": true, "kind": "task", "prompt": "règle le problème"}
+{"task": true, "kind": "task", "prompt": "nettoie le code"}
+{"task": true, "kind": "task", "prompt": "refactore ça"}
+{"task": true, "kind": "task", "prompt": "l'appli plante, corrige-la"}
+{"task": true, "kind": "task", "prompt": "mets à jour la doc"}
+{"task": true, "kind": "task", "prompt": "corrige le off-by-one dans paginate() pour que tests/test_pagination.py passe"}
+{"task": true, "kind": "task", "prompt": "ajoute un retry avec backoff exponentiel dans http/client.go, 3 tentatives max"}
+{"task": true, "kind": "task", "prompt": "l'endpoint /users renvoie 500 quand l'email manque, il doit renvoyer 400"}
+{"task": true, "kind": "task", "prompt": "écris des tests unitaires pour parse_duration() dans utils/time.py"}
+{"task": true, "kind": "task", "prompt": "corrige le NullPointerException dans OrderController.checkout()"}
+{"task": true, "kind": "task", "prompt": "renomme get_user en fetch_user dans tout le projet"}
+{"task": true, "kind": "task", "prompt": "passe axios en 1.7 dans package.json et corrige les erreurs de type"}
+{"task": true, "kind": "task", "prompt": "ajoute un index sur orders(customer_id, created_at) dans une nouvelle migration"}
+{"task": true, "kind": "task", "prompt": "le formulaire de connexion est soumis deux fois avec Entrée, corrige LoginForm.tsx"}
+{"task": true, "kind": "task", "prompt": "rends le Dockerfile multi-stage pour que l'image finale n'ait pas la toolchain Go"}
+{"task": true, "kind": "task", "prompt": "corrige l'erreur « connection refused » au démarrage du worker"}
+{"task": true, "kind": "task", "prompt": "ajoute la pagination limit/offset à GET /api/products"}
+{"task": false, "kind": "reply/question/process", "prompt": "oui"}
+{"task": false, "kind": "reply/question/process", "prompt": "ok"}
+{"task": false, "kind": "reply/question/process", "prompt": "vas-y"}
+{"task": false, "kind": "reply/question/process", "prompt": "continue"}
+{"task": false, "kind": "reply/question/process", "prompt": "parfait, merci !"}
+{"task": false, "kind": "reply/question/process", "prompt": "que fait cette fonction ?"}
+{"task": false, "kind": "reply/question/process", "prompt": "pourquoi tu as changé ça ?"}
+{"task": false, "kind": "reply/question/process", "prompt": "montre-moi le diff"}
+{"task": false, "kind": "reply/question/process", "prompt": "fais le commit"}
+{"task": false, "kind": "reply/question/process", "prompt": "attends, arrête"}
+{"task": true, "kind": "task", "prompt": "corrige les tests qui échouent"}
+{"task": true, "kind": "task", "prompt": "mets à jour la documentation"}
+{"task": false, "kind": "continuation", "prompt": "corrige-le de la même façon que le précédent"}
+{"task": true, "kind": "task", "prompt": "corrige le bug où le total du panier devient négatif avec un coupon de 100 %"}
+{"task": true, "kind": "task", "prompt": "bon, je suis dessus depuis tout l'après-midi et je n'arrive vraiment plus à comprendre ce qui se passe, est-ce que tu peux prendre le relais et juste corriger ça, quel que soit le problème, ça m'aiderait beaucoup parce que je suis assez fatigué"}
+{"task": true, "kind": "task", "prompt": "est-ce que tu peux rendre ça plus rapide s'il te plaît, c'est lent depuis longtemps et tout le monde dans l'équipe s'en plaint, peu importe comment tu t'y prends tant que ça devient nettement plus rapide que ce que c'est en ce moment"}
+{"task": true, "kind": "task", "prompt": "j'aimerais que tu nettoies un peu le code, c'est devenu assez difficile à suivre avec le temps et il y a sûrement plein de choses qu'on pourrait simplifier, alors vas-y, refactorise tout ce qui en a besoin selon toi et garde le tout bien rangé"}
+{"task": true, "kind": "task", "prompt": "ça plante encore, à peu près comme la semaine dernière, je pensais sincèrement que c'était réglé mais apparemment c'est revenu, est-ce que tu peux regarder sérieusement cette fois et le résoudre une bonne fois pour toutes pour qu'on n'ait plus à y revenir"}
+{"task": true, "kind": "task", "prompt": "les tests échouent et je ne sais pas pourquoi, ils passaient hier si je me souviens bien et je n'ai rien touché de lié, est-ce que tu peux aller voir ce qui se passe et les corriger pour qu'on puisse fusionner aujourd'hui sans problème"}
+{"task": true, "kind": "task", "prompt": "la page de résultats de recherche de la boutique met presque quatre secondes à charger quand un client filtre par marque et par taille en même temps, on dirait qu'on interroge la table des stocks une fois par produit, regroupe ces requêtes et garde l'ordre de tri actuel"}
+{"task": true, "kind": "task", "prompt": "ajoute un bouton d'export à l'écran du rapport mensuel qui télécharge le tableau visible sous forme de feuille de calcul, avec le symbole de la devise dans les colonnes de montants, en respectant la période choisie par le comptable"}
+{"task": true, "kind": "task", "prompt": "quand deux employés de l'entrepôt scannent le même colis à une seconde d'intervalle le stock baisse deux fois, il faut que le scanner ignore les scans en double pour un même code-barres, et le deuxième employé doit voir un message clair"}
+{"task": true, "kind": "task", "prompt": "ok j'ai testé l'application et tout fusionné, maintenant il faut la rendre un peu plus jolie et avoir de meilleures données d'exemple, par exemple des tournois, des rencontres et des joueurs avec des noms réalistes pour que les nouveaux utilisateurs comprennent"}
+{"task": false, "kind": "reply/question/process", "prompt": "ça me paraît très logique, merci de m'avoir tout expliqué étape par étape, j'avais peur qu'on doive réécrire une grosse partie mais c'est beaucoup moins de travail que prévu, on part sur ta proposition et on verra bien comment ça se passe"}
+{"task": false, "kind": "reply/question/process", "prompt": "quel serait l'inconvénient de tout garder dans une seule base de données pour l'instant et de ne la séparer que plus tard quand on aura vraiment plus de clients, j'ai l'impression qu'on règle un problème qu'on n'a pas encore ?"}
+{"task": true, "kind": "task", "prompt": "ça ne marche pas sur la tablette, quand un entraîneur dessine une action avec le stylet puis tourne l'appareil le dessin saute au mauvais endroit du terrain, il devrait rester attaché aux lignes du terrain dans les deux orientations"}
+{"task": false, "kind": "reply", "prompt": "super, c'est exactement ce qu'il me fallait"}
+{"task": false, "kind": "question", "prompt": "est-ce que ça marche aussi sous Windows ?"}
+{"task": false, "kind": "continuation", "prompt": "pareil pour l'application mobile"}
+{"task": true, "kind": "wish", "prompt": "j'aimerais que le tableau soit triable par date"}
+{"task": false, "kind": "continuation", "prompt": "bien, cette partie marche maintenant, alors continue avec les éléments suivants de la liste dans l'ordre qu'on a convenu, et préviens-moi si tu tombes sur quelque chose qui demande une décision de ma part"}
+{"task": false, "kind": "process", "prompt": "à partir de maintenant, garde des messages de commit courts et à l'impératif, et mentionne toujours le numéro du ticket à la fin de la première ligne pour que l'outil de suivi le récupère"}
+{"task": false, "kind": "reply", "prompt": "merci, c'était vraiment utile, je ne savais pas que le cache était partagé entre les deux workers, ça explique beaucoup de comportements bizarres qu'on a vus la semaine dernière, je transmettrai à l'équipe demain"}
+{"task": true, "kind": "wish", "prompt": "ce serait vraiment utile que la vue calendrier affiche les jours fériés du pays de l'utilisateur, grisés comme les week-ends, pour que les managers arrêtent de planifier des réunions ces jours-là"}

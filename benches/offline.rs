@@ -24,7 +24,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-use pacenote::lint::lint;
+use pacenote::lint::{is_task_request, lint};
 use pacenote::stats::{self, Filter};
 use serde::Deserialize;
 use serde_json::json;
@@ -53,6 +53,7 @@ fn main() {
     lint_quality(&mut report);
     typo_robustness(&mut report);
     long_prompts(&mut report);
+    task_detection(&mut report);
     throughput(&mut report, dir.path(), &truth);
     hook_latency(&mut report);
 
@@ -508,6 +509,83 @@ fn long_prompts(report: &mut String) {
             "| {name} | {} | {vague} | {} | {fp} |",
             corpus.len(),
             flagged.len()
+        );
+    }
+    let _ = writeln!(report);
+}
+
+#[derive(Deserialize)]
+struct TaskLabelled {
+    task: bool,
+    kind: String,
+    prompt: String,
+}
+
+/// Every rule fires only on task requests, so a reply or a question misread as
+/// a task is where false positives start. Labels: `bench/tasks*.jsonl` (dev)
+/// and `bench/tasks-holdout*.jsonl` (written and frozen before the rules).
+fn task_detection(report: &mut String) {
+    let _ = writeln!(report, "### 2d. Task-request detection\n");
+    let _ = writeln!(
+        report,
+        "Is the prompt a new request to change something (not a reply, a question, a process \
+         command or a continuation of earlier work)? Macro-F1 averages the F1 of both classes. \
+         The rules were developed on dev; the held-out set was frozen before they were written.\n"
+    );
+    let _ = writeln!(
+        report,
+        "| set | prompts | tasks | macro-F1 | accuracy | misread as task | missed tasks |"
+    );
+    let _ = writeln!(report, "|---|---:|---:|---:|---:|---:|---:|");
+    for (name, stem) in [("dev", "tasks"), ("held-out", "tasks-holdout")] {
+        let mut corpus = Vec::new();
+        for lang in LANGUAGES {
+            let suffix = if *lang == "en" {
+                String::new()
+            } else {
+                format!(".{lang}")
+            };
+            let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("bench")
+                .join(format!("{stem}{suffix}.jsonl"));
+            let text = fs::read_to_string(&path)
+                .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+            corpus.extend(
+                text.lines()
+                    .filter(|l| !l.trim().is_empty())
+                    .map(|l| serde_json::from_str::<TaskLabelled>(l).expect("valid task line")),
+            );
+        }
+        let (mut tp, mut fp, mut fn_, mut tn) = (0u32, 0u32, 0u32, 0u32);
+        let mut misread: Vec<&str> = Vec::new();
+        for item in &corpus {
+            match (is_task_request(&item.prompt), item.task) {
+                (true, true) => tp += 1,
+                (true, false) => {
+                    fp += 1;
+                    misread.push(&item.kind);
+                }
+                (false, true) => fn_ += 1,
+                (false, false) => tn += 1,
+            }
+        }
+        let f1 = |a: u32, b: u32, c: u32| {
+            if a == 0 {
+                0.0
+            } else {
+                2.0 * f64::from(a) / f64::from(2 * a + b + c)
+            }
+        };
+        let macro_f1 = (f1(tp, fp, fn_) + f1(tn, fn_, fp)) / 2.0;
+        misread.sort_unstable();
+        misread.dedup();
+        let _ = writeln!(
+            report,
+            "| {name} | {} | {} | {macro_f1:.3} | {:.1}% | {fp} ({}) | {fn_} |",
+            corpus.len(),
+            tp + fn_,
+            ratio(tp + tn, tp + fp + fn_ + tn) * 100.0,
+            misread.join(", ")
         );
     }
     let _ = writeln!(report);

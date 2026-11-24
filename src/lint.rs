@@ -63,8 +63,7 @@ pub fn lint(prompt: &str) -> Vec<Finding> {
         });
     }
 
-    let is_task = has_task_verb(&words, packs) || any(|l| l.task_phrases);
-    if !is_task || is_question(trimmed, &words, packs) {
+    if !is_task(trimmed, &words, packs) {
         return findings;
     }
 
@@ -108,14 +107,38 @@ pub fn is_task_request(prompt: &str) -> bool {
     let trimmed = prompt.trim();
     let words = words(trimmed);
     let packs = lang::detect(&words, trimmed);
+    is_task(trimmed, &words, &packs)
+}
+
+/// A new request to change something: it asks for a change (a task verb, a
+/// symptom or a wish such as "we need …") and is not a question, a
+/// continuation of earlier work ("do the same for …") or a process command
+/// ("commit and push").
+fn is_task(text: &str, words: &[String], packs: &[&Lang]) -> bool {
     let phrase = format!(" {} ", words.join(" "));
-    let mentions = |list: fn(&Lang) -> &'static [&'static str]| {
+    let any = |list: fn(&Lang) -> &'static [&'static str]| {
         packs
             .iter()
-            .any(|l| lang::mentions(list(l), &words, &phrase))
+            .any(|l| lang::mentions(list(l), words, &phrase))
     };
-    (has_task_verb(&words, &packs) || mentions(|l| l.task_phrases))
-        && !is_question(trimmed, &words, &packs)
+    let asks = has_task_verb(words, packs) || any(|l| l.task_phrases) || any(|l| l.wish_phrases);
+    asks && !is_question(text, words, packs)
+        && !any(|l| l.continuation_phrases)
+        && !is_process_command(words, packs)
+}
+
+/// Only version-control or review chores and generic words: "commit and
+/// push", "fais le commit", "review my changes".
+fn is_process_command(words: &[String], packs: &[&Lang]) -> bool {
+    let mut chores = 0;
+    for w in words {
+        if packs.iter().any(|l| lang::list_has(l.process_words, w)) {
+            chores += 1;
+        } else if !is_generic(w, packs) {
+            return false;
+        }
+    }
+    chores > 0
 }
 
 /// The main language of a prompt (for localized messages).
@@ -373,6 +396,38 @@ mod tests {
     fn typo_tolerant_task_detection() {
         assert!(is_task_request("optimze this function"));
         assert!(!is_task_request("thanks, looks good"));
+    }
+
+    #[test]
+    fn wishes_and_needs_are_requests() {
+        for p in [
+            "I'd like the table to be sortable by date",
+            "we need an audit log for admin actions",
+            "il faudrait un journal d'audit",
+            "wir brauchen ein Audit-Log",
+            "θα ήθελα ο πίνακας να ταξινομείται",
+            "increase the Lambda timeout to 60s",
+        ] {
+            assert!(is_task_request(p), "{p}");
+        }
+    }
+
+    #[test]
+    fn continuations_and_chores_are_not_new_tasks() {
+        for p in [
+            "now do the same for the other endpoints",
+            "carry on with the rest",
+            "sigue con los siguientes puntos",
+            "commit and push",
+            "fais le commit",
+            "κάνε commit",
+            "review my changes",
+        ] {
+            assert!(!is_task_request(p), "{p}");
+            assert!(codes(p).is_empty(), "{p}");
+        }
+        // A chore next to a real target is still a task.
+        assert!(is_task_request("add a pre-commit hook that runs rustfmt"));
     }
 
     #[test]

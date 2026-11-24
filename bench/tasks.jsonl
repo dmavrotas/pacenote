@@ -1,0 +1,150 @@
+{"task": true, "kind": "task", "prompt": "fix it"}
+{"task": true, "kind": "task", "prompt": "fix the bug"}
+{"task": true, "kind": "task", "prompt": "can you fix this?"}
+{"task": true, "kind": "task", "prompt": "it's broken, fix it"}
+{"task": true, "kind": "task", "prompt": "it doesn't work anymore, can you take a look and fix it"}
+{"task": true, "kind": "task", "prompt": "make it work"}
+{"task": true, "kind": "task", "prompt": "the app crashes, fix it"}
+{"task": true, "kind": "task", "prompt": "fix the crash"}
+{"task": true, "kind": "task", "prompt": "something is off with the API, fix it"}
+{"task": true, "kind": "task", "prompt": "fix the error"}
+{"task": true, "kind": "task", "prompt": "getting an error, please fix"}
+{"task": true, "kind": "task", "prompt": "make it faster"}
+{"task": true, "kind": "task", "prompt": "speed this up"}
+{"task": true, "kind": "task", "prompt": "optimize this"}
+{"task": true, "kind": "task", "prompt": "refactor this"}
+{"task": true, "kind": "task", "prompt": "clean this up"}
+{"task": true, "kind": "task", "prompt": "improve the code"}
+{"task": true, "kind": "task", "prompt": "add error handling"}
+{"task": true, "kind": "task", "prompt": "add logging"}
+{"task": true, "kind": "task", "prompt": "add some tests"}
+{"task": true, "kind": "task", "prompt": "handle the edge cases"}
+{"task": true, "kind": "task", "prompt": "update it to the new version"}
+{"task": true, "kind": "task", "prompt": "implement the feature we discussed"}
+{"task": true, "kind": "task", "prompt": "fix the issue from the ticket"}
+{"task": true, "kind": "task", "prompt": "make it better"}
+{"task": true, "kind": "task", "prompt": "this is too slow, optimize it"}
+{"task": true, "kind": "task", "prompt": "write tests for this"}
+{"task": true, "kind": "task", "prompt": "debug this"}
+{"task": true, "kind": "task", "prompt": "it's not working"}
+{"task": true, "kind": "task", "prompt": "pagination is broken, can you fix it"}
+{"task": true, "kind": "task", "prompt": "fix the failing test test_checkout_applies_coupon in tests/test_cart.py"}
+{"task": true, "kind": "task", "prompt": "the /users endpoint returns 500 when the email is missing; return 400 with a validation error instead"}
+{"task": true, "kind": "task", "prompt": "add structured logging with request_id to handlers/orders.go"}
+{"task": true, "kind": "task", "prompt": "write unit tests for parse_duration() in utils/time.py covering empty and negative input"}
+{"task": true, "kind": "task", "prompt": "refactor UserRepository to use the new db.Pool instead of a global connection"}
+{"task": true, "kind": "task", "prompt": "bump axios to 1.7 in package.json and fix any type errors"}
+{"task": true, "kind": "task", "prompt": "add an index on orders(customer_id, created_at) in a new migration"}
+{"task": true, "kind": "task", "prompt": "getting `TypeError: Cannot read properties of undefined (reading 'map')` in ProductList.tsx when the API returns no items, fix it"}
+{"task": true, "kind": "task", "prompt": "add retry with backoff to the S3 upload in storage/upload.py, max 3 attempts"}
+{"task": true, "kind": "task", "prompt": "make the Dockerfile multi-stage so the final image doesn't include the Go toolchain"}
+{"task": true, "kind": "task", "prompt": "fix the race condition in cache.Get where two goroutines can both miss and write"}
+{"task": true, "kind": "task", "prompt": "add a GitHub Actions job that runs `npm run lint` on pull requests"}
+{"task": true, "kind": "task", "prompt": "rename the amount column to amount_cents and update OrderModel"}
+{"task": true, "kind": "task", "prompt": "add limit/offset pagination to GET /api/products"}
+{"task": true, "kind": "task", "prompt": "the login form submits twice when you press Enter; prevent the double submit in LoginForm.tsx"}
+{"task": true, "kind": "task", "prompt": "increase the Lambda timeout for process-invoices to 60s in serverless.yml"}
+{"task": true, "kind": "task", "prompt": "add a Terraform output for the RDS endpoint in modules/db/outputs.tf"}
+{"task": true, "kind": "task", "prompt": "switch config loading in settings.py to pydantic BaseSettings"}
+{"task": true, "kind": "task", "prompt": "fix the N+1 query in OrderSerializer by prefetching line_items"}
+{"task": true, "kind": "task", "prompt": "add a /healthz endpoint that returns 200 and the git sha"}
+{"task": true, "kind": "task", "prompt": "write a docstring for calculate_tax explaining the rounding rules"}
+{"task": true, "kind": "task", "prompt": "update README.md with instructions for running the app with docker compose"}
+{"task": true, "kind": "task", "prompt": "the nightly job fails with KeyError: 'region' in jobs/sync.py; default the region to us-east-1"}
+{"task": true, "kind": "task", "prompt": "make `cargo clippy -- -D warnings` pass"}
+{"task": true, "kind": "task", "prompt": "debug why the websocket disconnects every 30s in client/socket.ts"}
+{"task": true, "kind": "task", "prompt": "remove the deprecated v1 routes from api/routes.py and their tests"}
+{"task": true, "kind": "task", "prompt": "add validation to CreateUserRequest: email required, name at most 100 chars"}
+{"task": true, "kind": "task", "prompt": "implement the CSV export button on the reports page using the existing /api/reports/export endpoint"}
+{"task": true, "kind": "task", "prompt": "fix the timezone bug: created_at is stored in local time instead of UTC in models/event.py"}
+{"task": true, "kind": "task", "prompt": "set up pre-commit with black and ruff for this repo"}
+{"task": false, "kind": "reply/question/process", "prompt": "yes"}
+{"task": false, "kind": "reply/question/process", "prompt": "no"}
+{"task": false, "kind": "reply/question/process", "prompt": "ok"}
+{"task": false, "kind": "reply/question/process", "prompt": "go ahead"}
+{"task": false, "kind": "reply/question/process", "prompt": "continue"}
+{"task": false, "kind": "reply/question/process", "prompt": "looks good"}
+{"task": false, "kind": "reply/question/process", "prompt": "thanks!"}
+{"task": false, "kind": "reply/question/process", "prompt": "lgtm, commit it"}
+{"task": false, "kind": "reply/question/process", "prompt": "sounds good, do it"}
+{"task": false, "kind": "reply/question/process", "prompt": "wait, stop"}
+{"task": false, "kind": "reply/question/process", "prompt": "undo that"}
+{"task": false, "kind": "reply/question/process", "prompt": "try again"}
+{"task": false, "kind": "reply/question/process", "prompt": "what does this function do?"}
+{"task": false, "kind": "reply/question/process", "prompt": "why did you change that?"}
+{"task": false, "kind": "reply/question/process", "prompt": "explain it more simply"}
+{"task": false, "kind": "reply/question/process", "prompt": "can you show me the diff?"}
+{"task": false, "kind": "reply/question/process", "prompt": "what's the difference between these two approaches?"}
+{"task": false, "kind": "reply/question/process", "prompt": "how does the auth flow work here?"}
+{"task": false, "kind": "reply/question/process", "prompt": "which one would you recommend?"}
+{"task": false, "kind": "reply/question/process", "prompt": "is this safe to deploy?"}
+{"task": false, "kind": "reply/question/process", "prompt": "what would break if we removed this?"}
+{"task": false, "kind": "reply/question/process", "prompt": "summarize what you changed"}
+{"task": false, "kind": "reply/question/process", "prompt": "push it"}
+{"task": false, "kind": "reply/question/process", "prompt": "open a PR"}
+{"task": false, "kind": "reply/question/process", "prompt": "run the tests"}
+{"task": true, "kind": "task", "prompt": "fix the failing tests"}
+{"task": true, "kind": "task", "prompt": "fix the linter errors"}
+{"task": true, "kind": "task", "prompt": "the build is red"}
+{"task": true, "kind": "task", "prompt": "update the docs"}
+{"task": true, "kind": "task", "prompt": "fix all the bugs"}
+{"task": true, "kind": "task", "prompt": "add dark mode"}
+{"task": true, "kind": "task", "prompt": "make the app faster"}
+{"task": false, "kind": "continuation", "prompt": "fix it the same way you fixed the previous one"}
+{"task": false, "kind": "continuation", "prompt": "now do the same for the other endpoints"}
+{"task": true, "kind": "task", "prompt": "fix the bug where the cart total goes negative with a 100% coupon"}
+{"task": true, "kind": "task", "prompt": "make the dashboard load faster, it fetches every order on page load"}
+{"task": true, "kind": "task", "prompt": "add tests for the pagination helpers"}
+{"task": false, "kind": "process", "prompt": "review my changes"}
+{"task": false, "kind": "question", "prompt": "why is this slow?"}
+{"task": true, "kind": "task", "prompt": "add a dark mode toggle to the settings page"}
+{"task": true, "kind": "task", "prompt": "alright so I have been staring at this for most of the afternoon and I really cannot tell what is going on anymore, could you take over and just fix it, whatever the problem is, I would really appreciate it because I am pretty tired"}
+{"task": true, "kind": "task", "prompt": "can you please make this faster, it has been slow for a long time and everyone on the team keeps complaining about it, I do not mind how you do it as long as it ends up being noticeably quicker than it is right now"}
+{"task": true, "kind": "task", "prompt": "I would like you to clean up the code a bit, it has become quite hard to follow over time and there are probably lots of things that could be simplified, so go ahead and refactor whatever you think needs it and keep it tidy"}
+{"task": true, "kind": "task", "prompt": "it crashes again, same as last week more or less, I honestly thought this was sorted but apparently it is back, can you have a proper look this time and resolve it for good so we do not have to keep coming back to it"}
+{"task": true, "kind": "task", "prompt": "we really need better error handling in here, right now when something goes wrong it just falls over and nobody knows what happened, please add proper error handling everywhere it makes sense and make sure it does not just silently swallow things"}
+{"task": true, "kind": "task", "prompt": "add some logging please, at the moment it is basically impossible to tell what is happening when things go wrong, so put logging in the places that matter and make it useful, I will leave the details completely up to you on this one"}
+{"task": true, "kind": "task", "prompt": "the tests are failing and I am not sure why, they were passing yesterday as far as I remember and I did not touch anything related, could you go and find out what is going on and fix them so that we can merge today"}
+{"task": true, "kind": "task", "prompt": "I feel like this could be a lot better than it is right now, there is nothing specifically broken but it just does not feel great to use, can you improve it in whatever ways you think would help and then tell me what you changed"}
+{"task": true, "kind": "task", "prompt": "update the documentation please, it is completely out of date by now and half of what it says is not true anymore, go through all of it and make sure it matches how things actually work today, and fix anything else you notice along the way"}
+{"task": true, "kind": "task", "prompt": "so yeah it is broken, I do not really know what else to say about it, it worked fine before and now it does not, please debug it and figure out what went wrong and then fix it, thanks a lot in advance for the help"}
+{"task": true, "kind": "task", "prompt": "could you investigate this issue for me, something about it has been bothering me for a few days and I have a feeling it is related to the latest changes but I am really not sure, so dig into it and fix whatever you find"}
+{"task": true, "kind": "task", "prompt": "hey, I need you to write tests for all of this because we basically have none at the moment and it makes every change pretty scary, cover as much as you reasonably can and make sure the tests are actually meaningful and not just there for show"}
+{"task": true, "kind": "task", "prompt": "the search results page on the storefront takes almost four seconds to load when a shopper filters by brand and size together, it looks like we query the inventory table once per product, please batch those queries and keep the existing sort order"}
+{"task": true, "kind": "task", "prompt": "add an export button to the monthly report screen that downloads the visible table as a spreadsheet, include the currency symbol in the amount columns, respect the date range the accountant selected, and name the file after the report month"}
+{"task": true, "kind": "task", "prompt": "when two warehouse workers scan the same parcel within a second of each other the stock count goes down twice, we need the scanner endpoint to be idempotent per parcel barcode so duplicate scans are ignored, and the second worker should see a friendly message"}
+{"task": true, "kind": "task", "prompt": "I want to add push notifications to the mobile app for when a delivery driver is ten minutes away, the customer should be able to turn them off in their profile, and the message should include the driver's first name and the estimated arrival time"}
+{"task": true, "kind": "task", "prompt": "our newsletter signup form accepts addresses with spaces and trailing dots, which then bounce when the weekly campaign goes out, please validate addresses on submit, trim surrounding whitespace, and show the error message underneath the email field in red"}
+{"task": true, "kind": "task", "prompt": "migrate the appointment reminders from the old cron script to the job queue we use for invoices, reminders should go out twenty four hours and one hour before each appointment, and cancelled appointments must never trigger a reminder even if the job already exists"}
+{"task": true, "kind": "task", "prompt": "the leaderboard on the quiz page ranks players with the same score in random order every time it refreshes, sort ties by the time they finished instead, so the faster player stays on top, and show the finishing time in a small grey label"}
+{"task": true, "kind": "task", "prompt": "build a simple admin screen for the library catalogue where librarians can add, edit and retire books, each book needs a title, author, shelf location and availability status, and retired books should stay in the borrowing history of past members"}
+{"task": true, "kind": "task", "prompt": "ok I tested the app and merged everything, now we need to make it a bit prettier and also have better sample data, for example put in some tournaments, fixtures and players with realistic names so new users can understand how everything fits together"}
+{"task": true, "kind": "task", "prompt": "all merged, let's continue, and let's add a new feature where users can optionally rewrite their prompt with their own account to make it shorter, we also need to start thinking about supporting more languages than just English and Greek"}
+{"task": true, "kind": "task", "prompt": "now please do a thorough review of all the Rust code in this project and check whether there are things to improve so it is more idiomatic, especially around error handling, ownership and the way we spawn background threads for the file watcher"}
+{"task": false, "kind": "process", "prompt": "my computer ran out of memory, so from now on let's run the simulators in batches and not all of them in parallel, but also not one at a time, something like three at once sounds reasonable, and remember to do this in the future too"}
+{"task": false, "kind": "reply/question/process", "prompt": "that makes a lot of sense, thank you for walking me through it step by step, I was worried we would have to rewrite a big part of it but this is much less work than I expected, let's go with your suggestion and see how it goes"}
+{"task": false, "kind": "reply/question/process", "prompt": "what would be the downside of keeping everything in a single database for now and only splitting it later when we actually have more customers, it feels like we are optimising for a problem we do not have yet, or am I missing something important here?"}
+{"task": false, "kind": "reply/question/process", "prompt": "honestly I am not convinced, the numbers you showed look good but they come from a tiny sample and I would like to see the same comparison on a bigger set before we decide anything, can we hold off on this until next week?"}
+{"task": false, "kind": "reply/question/process", "prompt": "how does the caching layer decide when an entry is stale, is it purely based on time or does it also look at writes coming from other services, I am asking because we saw some outdated prices on the product page yesterday afternoon?"}
+{"task": false, "kind": "reply/question/process", "prompt": "great work today, really, I think the new version is a lot easier to read and the reviewers will appreciate the smaller pull requests, let's call it a day here and tomorrow we can look at the remaining items on the list together"}
+{"task": true, "kind": "task", "prompt": "it is not working on the tablet, when a coach draws a play with the pencil and then rotates the device the drawing jumps to the wrong part of the court, it should stay attached to the court lines in both orientations"}
+{"task": false, "kind": "reply", "prompt": "great, that's exactly what I needed"}
+{"task": false, "kind": "reply", "prompt": "no wait, I changed my mind, leave it as it was"}
+{"task": false, "kind": "question", "prompt": "does this also work on Windows?"}
+{"task": false, "kind": "question", "prompt": "can you explain how the retry logic works?"}
+{"task": false, "kind": "process", "prompt": "merge it into main"}
+{"task": false, "kind": "process", "prompt": "run the benchmarks again"}
+{"task": false, "kind": "continuation", "prompt": "same thing for the mobile app please"}
+{"task": false, "kind": "continuation", "prompt": "carry on with the rest"}
+{"task": true, "kind": "wish", "prompt": "I'd like the table to be sortable by date"}
+{"task": true, "kind": "change", "prompt": "we need an audit log for admin actions"}
+{"task": true, "kind": "symptom", "prompt": "the avatar upload is broken on Safari"}
+{"task": true, "kind": "change", "prompt": "drop the unused columns from the users table"}
+{"task": false, "kind": "reply", "prompt": "thanks, that was really helpful, I had no idea the cache was shared between the two workers, that explains a lot of the weird behaviour we saw last week, I'll pass it on to the rest of the team tomorrow morning"}
+{"task": false, "kind": "question", "prompt": "could you explain the difference between the two retry strategies you proposed, I'm trying to understand which one would behave better when the payment provider is down for a few minutes and we have a lot of traffic"}
+{"task": false, "kind": "continuation", "prompt": "nice, that part works now, so please continue with the next items on the list in the same order we agreed, and let me know if you hit anything that needs a decision from me along the way"}
+{"task": false, "kind": "process", "prompt": "from now on, please keep your commit messages short and in the imperative mood, and always mention the ticket number at the end of the first line so the tracker picks it up automatically"}
+{"task": false, "kind": "reply", "prompt": "I'm not convinced this is worth it right now, it adds another moving part and we haven't seen the problem in production yet, so let's park the idea and come back to it if the error rate goes up"}
+{"task": false, "kind": "process", "prompt": "alright, everything is green on my machine too, so go ahead and squash the commits into one, push the branch and open a pull request with a short description of what changed and why"}
+{"task": true, "kind": "wish", "prompt": "it would be really useful if the calendar view showed public holidays for the user's country, greyed out like weekends, so managers stop scheduling meetings on days when half the team is off"}
+{"task": true, "kind": "change", "prompt": "let's add a simple feedback widget to the bottom of every help article, two buttons for helpful or not helpful and an optional comment box, and store the results so the support team can see which articles need work"}

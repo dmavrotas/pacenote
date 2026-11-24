@@ -1,0 +1,16 @@
+{"task": true, "kind": "change", "prompt": "ajoute la pagination à la liste des commandes"}
+{"task": true, "kind": "symptom", "prompt": "l'export plante pour les gros comptes"}
+{"task": true, "kind": "wish", "prompt": "j'aimerais que la barre latérale se souvienne de son état"}
+{"task": true, "kind": "change", "prompt": "renomme le module de facturation en paiements"}
+{"task": false, "kind": "reply", "prompt": "parfait, merci beaucoup"}
+{"task": false, "kind": "question", "prompt": "que se passe-t-il si la file est pleine ?"}
+{"task": false, "kind": "process", "prompt": "commit et push"}
+{"task": false, "kind": "continuation", "prompt": "fais pareil pour les pages d'administration"}
+{"task": true, "kind": "change", "prompt": "l'écran des rapports est devenu très lourd et met une éternité à s'ouvrir pour nos gros clients, est-ce que tu peux séparer les graphiques dans des onglets chargés à la demande et garder les chiffres principaux en haut de la page"}
+{"task": true, "kind": "symptom", "prompt": "depuis le dernier déploiement certains utilisateurs sont déconnectés toutes les quelques minutes, surtout sur mobile et surtout ceux qui avaient laissé l'application ouverte la nuit, rien d'évident dans nos journaux pour l'instant"}
+{"task": true, "kind": "wish", "prompt": "ce serait vraiment bien que la recherche trouve aussi les joueurs par leur numéro de maillot et leur surnom, les entraîneurs nous disent qu'ils se souviennent mieux des numéros que des noms, surtout pour les adversaires"}
+{"task": true, "kind": "change", "prompt": "il faut arrêter d'envoyer le résumé hebdomadaire aux personnes qui ne se sont pas connectées depuis trois mois, marque-les comme inactives et envoie un seul courriel de réactivation avec un lien direct vers leur tableau de bord"}
+{"task": false, "kind": "reply", "prompt": "c'est super, merci pour la rapidité, j'ai regardé les captures sur mon téléphone et sur l'ordinateur et tout est bien aligné maintenant, ça me va très bien donc on laisse comme ça pour aujourd'hui"}
+{"task": false, "kind": "question", "prompt": "avant d'aller plus loin, est-ce que tu peux m'expliquer comment les permissions sont vérifiées quand un utilisateur ouvre un tableau partagé, je veux comprendre ce qui tourne sur le serveur et ce qui tourne dans le navigateur"}
+{"task": false, "kind": "continuation", "prompt": "ok ça marche, maintenant continue avec les étapes restantes du plan de la même façon, et garde chaque modification dans son propre commit pour que je puisse les relire une par une plus tard ce soir"}
+{"task": false, "kind": "process", "prompt": "à partir de maintenant lance toujours toute la suite de tests et le linter avant de me dire que c'est terminé, et si quelque chose échoue dis-le moi tout de suite au lieu de le contourner en silence"}

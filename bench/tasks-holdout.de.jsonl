@@ -1,0 +1,16 @@
+{"task": true, "kind": "change", "prompt": "füge Seitennummerierung zur Bestellliste hinzu"}
+{"task": true, "kind": "symptom", "prompt": "der Export hängt bei großen Konten"}
+{"task": true, "kind": "wish", "prompt": "ich möchte dass die Seitenleiste sich merkt ob sie eingeklappt war"}
+{"task": true, "kind": "change", "prompt": "benenne das Abrechnungsmodul in Zahlungen um"}
+{"task": false, "kind": "reply", "prompt": "perfekt, vielen Dank"}
+{"task": false, "kind": "question", "prompt": "was passiert wenn die Warteschlange voll ist?"}
+{"task": false, "kind": "process", "prompt": "commit und push"}
+{"task": false, "kind": "continuation", "prompt": "mach dasselbe für die Admin-Seiten"}
+{"task": true, "kind": "change", "prompt": "die Berichtsseite ist ziemlich gewachsen und braucht jetzt ewig zum Öffnen bei großen Kunden, kannst du die schweren Diagramme in Tabs aufteilen die erst bei Bedarf laden und die wichtigsten Zahlen oben auf der Seite lassen"}
+{"task": true, "kind": "symptom", "prompt": "seit dem letzten Deployment werden manche Nutzer alle paar Minuten abgemeldet, vor allem auf dem Handy und vor allem die die App über Nacht offen gelassen hatten, in unseren Protokollen sehen wir bisher nichts Auffälliges"}
+{"task": true, "kind": "wish", "prompt": "es wäre wirklich schön wenn die Suche Spieler auch über ihre Trikotnummer und ihren Spitznamen findet, die Trainer sagen uns dass sie sich Nummern besser merken als Namen, besonders bei Gegnern die sie nur einmal gesehen haben"}
+{"task": true, "kind": "change", "prompt": "wir sollten die wöchentliche Zusammenfassung nicht mehr an Leute schicken die sich seit drei Monaten nicht angemeldet haben, markiere sie als inaktiv und schicke eine einzige Reaktivierungsmail mit einem direkten Link zu ihrem Dashboard"}
+{"task": false, "kind": "reply", "prompt": "das sieht super aus, danke für die schnelle Umsetzung, ich habe mir die Screenshots auf dem Handy und auf dem Laptop angesehen und jetzt passt alles, so gefällt es mir, also lassen wir es für heute dabei"}
+{"task": false, "kind": "question", "prompt": "bevor wir weitermachen, kannst du mir erklären wie die Berechtigungen geprüft werden wenn ein Nutzer ein geteiltes Board öffnet, ich möchte verstehen welcher Teil auf dem Server läuft und welcher im Browser bevor wir etwas ändern"}
+{"task": false, "kind": "continuation", "prompt": "ok das hat geklappt, jetzt mach mit den restlichen Schritten des Plans genauso weiter, und pack jede Änderung in einen eigenen Commit damit ich sie heute Abend einzeln durchsehen kann wenn ich zurück bin"}
+{"task": false, "kind": "process", "prompt": "ab jetzt lass bitte immer die komplette Testsuite und den Linter laufen bevor du mir sagst dass etwas fertig ist, und wenn etwas fehlschlägt sag es mir sofort statt es still zu umgehen"}

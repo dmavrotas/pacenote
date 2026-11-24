@@ -174,6 +174,8 @@ Each language has a word pack in [`src/lang.rs`](src/lang.rs) and labelled promp
 | `large-paste` | warn | The prompt is over ~5k tokens; point to a file or trim to the first error instead |
 | `no-done-criteria` | info | A task request doesn't say what success looks like |
 
+**What counts as a task.** Rules only fire on new requests to change something: a task verb ("fix", "increase", "replace"), a symptom ("the build is red") or a wish ("I'd like …", "we need …", "il faudrait …", "wir brauchen …"). Questions, continuations of earlier work ("do the same for the other endpoints", "carry on") and version-control chores ("commit and push", "review my changes") are left alone. On held-out prompts in five languages this tells requests from everything else with macro-F1 0.77, up from 0.52.
+
 `vague-target` only judges prompts of up to 30 words. Long prompts nearly always carry enough words to describe a target, and the one rule tried for long vague prompts (counting words that are rare in everyday language) was rejected: 83% precision on held-out prompts against a 90% bar set in advance. The labelled long prompts are kept in `bench/prompts-long*.jsonl` as the baseline for the next attempt.
 
 Rules only fire on prompts that look like task requests, so replies like "yes" or "go ahead" are never flagged.
@@ -210,6 +212,7 @@ Latest results: [offline](bench/results/offline.md) · [end-to-end](bench/result
 | `stats` accuracy vs ground truth | exact (a naive per-line sum overcounts by ~150%) |
 | `vague-target` on held-out prompts (5 languages) | 100% precision, 94–100% recall |
 | `vague-target` with 15% / 30% of words mistyped (held-out) | 100% precision, 92% / 84% recall |
+| task-request detection on held-out prompts (5 languages) | macro-F1 0.77 (was 0.52) |
 | hook overhead per prompt | ~1.5 ms p50 |
 | scan throughput | ~740 MB/s |
 
